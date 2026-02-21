@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import os
 import sys
 from netschoolpy import NetSchool
@@ -33,35 +32,28 @@ async def main():
                         print("Сканируйте QR!")
                     await ns.login_via_gosuslugi_qr(qr_cb)
                 except ImportError:
-                    print("Нужен qrcode: pip install qrcode")
+                    print("pip install qrcode")
                     return
             elif esia_login and esia_password:
                 await ns.login_via_gosuslugi(esia_login, esia_password)
             elif ns_login and ns_password:
                 await ns.login(ns_login, ns_password, ns_school)
             else:
-                print("Нет данных для входа. Используйте ENV или флаг --qr")
+                print("Нет данных (ENV NS_LOGIN/ESIA_LOGIN или --qr)")
                 return
 
-            # Логика скрипта
-            today = datetime.date.today()
-            start = today - datetime.timedelta(days=30)
-            end = today
-
-            print(f"Считаем средний балл с {start} по {end}...")
-
-            diary = await ns.diary(start=start, end=end)
-            all_marks = []
-            
+            diary = await ns.diary()
+            print("Поиск вложений...")
+            found = False
             for day in diary.days:
-                for lesson in day.lessons:
-                    if lesson.mark:
-                        all_marks.append(lesson.mark)
-            
-            if all_marks:
-                print(f"Средний балл: {sum(all_marks)/len(all_marks):.2f}")
-            else:
-                print("Оценок нет.")
+                for user_lesson in day.lessons:
+                     if user_lesson.attachments:
+                         found = True
+                         print(f"Предмет: {user_lesson.subject}")
+                         for a in user_lesson.attachments:
+                             print(f" - {a.name}")
+            if not found:
+                print("Вложений не найдено")
         except Exception as e:
             print(f"Ошибка: {e}")
 
