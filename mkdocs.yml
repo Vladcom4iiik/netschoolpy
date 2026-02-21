@@ -1,0 +1,36 @@
+site_name: NetschoolPy
+site_url: https://vladcom4iiik.github.io/netschoolpy/
+repo_url: https://github.com/Vladcom4iiik/netschoolpy
+repo_name: Vladcom4iiik/netschoolpy
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.expand
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Guide: guide.md
+  - API Reference: api.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
