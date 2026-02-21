@@ -22,11 +22,14 @@ theme:
         name: Switch to light mode
 
 nav:
-  - Home: index.md
-  - Guide: guide.md
-  - Advanced: advanced.md
-  - Data Models: models.md
-  - API Reference: api.md
+  - 'Главная': index.md
+  - 'Руководство':
+    - 'Начало работы': guide.md
+    - 'Продвинутое использование': advanced.md
+    - 'Вход через Госуслуги (ESIA)': esia_login.md
+  - 'Справочник API':
+    - 'API Reference': api.md
+    - 'Модели данных': models.md
 
 markdown_extensions:
   - pymdownx.highlight:

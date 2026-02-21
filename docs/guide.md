@@ -2,13 +2,25 @@
 
 ## Авторизация
 
-Для работы с API необходимо авторизоваться. Поддерживается как обычная авторизация по логину/паролю, так и через ESIA (Госуслуги) в будущем (функционал в разработке).
+Для работы с API необходимо авторизоваться. Поддерживается:
+1.  Обычная авторизация (логин/пароль, выданные в школе).
+2.  Авторизация через **Госуслуги (ESIA)**.
+
+### Обычный вход
 
 ```python
-from netschoolpy import NetSchoolAPI
+from netschoolpy import NetSchool
 
-ns = NetSchoolAPI('https://your-netschool-url.ru')
+ns = NetSchool('https://your-netschool-url.ru')
 await ns.login('student_login', 'password', 'School Name')
+```
+
+### Вход через Госуслуги
+
+Подробнее см. в разделе [Вход через Госуслуги](esia_login.md).
+
+```python
+await ns.login_esia('gosuslugi_login', 'gosuslugi_password')
 ```
 
 ## Получение дневника
