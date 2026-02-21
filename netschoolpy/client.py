@@ -718,28 +718,40 @@ class NetSchool:
                     )
                 buffer += chunk
 
-                text = buffer.decode("utf-8", errors="replace")
-                for part in text.split("\n"):
-                    part = part.strip()
-                    if part.startswith("data:"):
-                        data_str = part[5:].strip()
-                        if data_str:
-                            data = json.loads(data_str)
-                            error = data.get("error", {})
-                            code = (
-                                error.get("code", "")
-                                if isinstance(error, dict)
-                                else ""
-                            )
-                            if code in (
-                                "QR_AUTHORIZATION_SESSION_EXPIRED",
-                                "QR_CODE_SESSION_NOT_FOUND",
-                                "QR_CODE_SESSION_OUTDATED",
-                            ):
-                                raise exceptions.LoginError(
-                                    f"QR сессия истекла: {code}"
-                                )
-                            return data
+                # Обрабатываем только завершённые строки (до \n).
+                # Незавершённый хвост остаётся в buffer на следующий цикл.
+                while b"\n" in buffer:
+                    line_bytes, buffer = buffer.split(b"\n", 1)
+                    line = line_bytes.decode("utf-8", errors="replace").strip()
+
+                    if not line.startswith("data:"):
+                        continue
+
+                    data_str = line[5:].strip()
+                    if not data_str:
+                        continue
+
+                    try:
+                        data = json.loads(data_str)
+                    except (json.JSONDecodeError, ValueError):
+                        # Неполный или невалидный JSON — пропускаем
+                        continue
+
+                    error = data.get("error", {})
+                    code = (
+                        error.get("code", "")
+                        if isinstance(error, dict)
+                        else ""
+                    )
+                    if code in (
+                        "QR_AUTHORIZATION_SESSION_EXPIRED",
+                        "QR_CODE_SESSION_NOT_FOUND",
+                        "QR_CODE_SESSION_OUTDATED",
+                    ):
+                        raise exceptions.LoginError(
+                            f"QR сессия истекла: {code}"
+                        )
+                    return data
 
         except asyncio.TimeoutError:
             raise exceptions.LoginError(
