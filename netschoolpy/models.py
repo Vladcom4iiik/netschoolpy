@@ -99,6 +99,7 @@ class Assignment:
     mark: Optional[int]
     is_duty: bool
     deadline: datetime.date
+    attachments: List[Attachment] = field(default_factory=list)
 
     @classmethod
     def from_raw(cls, data: dict, type_mapping: Dict[int, str] | None = None) -> Assignment:
@@ -130,6 +131,7 @@ class Assignment:
             mark=mark_value,
             is_duty=duty,
             deadline=_parse_date(data["dueDate"]),
+            attachments=[Attachment.from_raw(a) for a in data.get("attachments", [])],
         )
 
 

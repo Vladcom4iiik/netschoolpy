@@ -22,7 +22,7 @@ async def main():
         print("Успешный вход через ESIA!")
         
         diary = await ns.diary()
-        print(f"Дневник получен. Уроков на неделе: {sum(len(d.lessons) for d in diary.days)}")
+        print(f"Дневник получен. Уроков на неделе: {sum(len(d.lessons) for d in diary.schedule)}")
 
     except Exception as e:
         print(f"Ошибка входа: {e}")

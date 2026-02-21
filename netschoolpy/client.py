@@ -57,7 +57,7 @@ class NetSchool:
         return self
 
     async def __aexit__(self, *exc: Any) -> None:
-        await self.logout()
+        await self.close()
 
     # ═══════════════════════════════════════════════════════════
     #  Авторизация по логину/паролю SGO

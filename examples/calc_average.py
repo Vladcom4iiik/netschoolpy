@@ -30,7 +30,8 @@ async def main():
                     import qrcode
                     async def qr_cb(data):
                         qr = qrcode.QRCode(); qr.add_data(data); qr.print_ascii()
-                        print("Сканируйте QR!")
+                        print("\n⚠️  ВАЖНО: QR-код действителен только 1 минуту!")
+                        print("Отсканируйте QR-код в приложении Госуслуги -> Сканер")
                     await ns.login_via_gosuslugi_qr(qr_cb)
                 except ImportError:
                     print("Нужен qrcode: pip install qrcode")
@@ -53,10 +54,11 @@ async def main():
             diary = await ns.diary(start=start, end=end)
             all_marks = []
             
-            for day in diary.days:
+            for day in diary.schedule:
                 for lesson in day.lessons:
-                    if lesson.mark:
-                        all_marks.append(lesson.mark)
+                    for assignment in lesson.assignments:
+                        if assignment.mark:
+                            all_marks.append(assignment.mark)
             
             if all_marks:
                 print(f"Средний балл: {sum(all_marks)/len(all_marks):.2f}")

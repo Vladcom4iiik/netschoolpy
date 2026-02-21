@@ -14,16 +14,16 @@ pip install netschoolpy
 
 ```python
 import asyncio
-from netschoolpy import NetSchoolAPI
+from netschoolpy import NetSchool
 
 async def main():
-    ns = NetSchoolAPI('https://netschool.example.com')
-    await ns.login('login', 'password', 'school_name')
-    
-    diary = await ns.diary()
-    print(diary)
-    
-    await ns.logout()
+    async with NetSchool('https://sgo.example.ru') as ns:
+        await ns.login('login', 'password', 'Школа №1')
+        
+        diary = await ns.diary()
+        for day in diary.schedule:
+            for lesson in day.lessons:
+                print(f"{lesson.number}. {lesson.subject}")
 
 if __name__ == '__main__':
     asyncio.run(main())

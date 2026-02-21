@@ -8,11 +8,11 @@
 
 - `start` (datetime.date): Дата начала периода.
 - `end` (datetime.date): Дата конца периода.
-- `days` (List[Day]): Список дней.
+- `schedule` (List[Day]): Список учебных дней.
 
 ## Day (Учебный день)
 
-- `date` (datetime.date): Дата.
+- `day` (datetime.date): Дата.
 - `lessons` (List[Lesson]): Список уроков за этот день.
 
 ## Lesson (Урок)
@@ -20,19 +20,49 @@
 Представляет собой один слот в расписании.
 
 - `day` (datetime.date): Дата урока.
+- `start` (datetime.time): Время начала.
+- `end` (datetime.time): Время окончания.
 - `number` (int): Порядковый номер урока (1, 2, 3...).
 - `subject` (str): Название предмета (например, "Алгебра").
 - `room` (str): Кабинет.
-- `teacher` (str): ФИО учителя.
-- `theme` (str): Тема урока (из плана).
-- `homework` (str): Текст домашнего задания.
-- `mark` (int | None): Оценка за урок (если есть).
-- `mark_type` (str | None): Тип оценки (например, "Ответ на уроке", "Контрольная работа").
+- `assignments` (List[Assignment]): Список заданий к уроку.
+
+## Assignment (Задание)
+
+Домашнее задание, контрольная работа и другие типы заданий.
+
+- `id` (int): ID задания.
+- `kind` (str): Тип задания (например, "Домашняя работа", "Контрольная работа").
+- `content` (str): Текст задания.
+- `comment` (str): Комментарий к оценке.
+- `mark` (int | None): Оценка за задание (если есть).
+- `is_duty` (bool): Оценка по долгу.
+- `deadline` (datetime.date): Дата сдачи.
+- `attachments` (List[Attachment]): Прикреплённые файлы.
 
 ## Attachment (Вложение)
 
-Если к домашнему заданию или объявлению прикреплены файлы.
+Если к заданию или объявлению прикреплены файлы.
 
 - `id` (int): ID файла.
 - `name` (str): Имя файла.
-- `link` (str): Ссылка для скачивания (требует авторизации).
+- `description` (str): Описание.
+
+## Announcement (Объявление)
+
+- `name` (str): Заголовок.
+- `author` (Author): Автор.
+- `content` (str): Текст.
+- `post_date` (datetime.datetime): Дата публикации.
+- `attachments` (List[Attachment]): Прикреплённые файлы.
+
+## Author (Автор)
+
+- `id` (int): ID пользователя.
+- `full_name` (str): ФИО.
+- `nickname` (str): Ник.
+
+## ShortSchool / School (Школа)
+
+`ShortSchool` — краткая информация (название, ID, адрес).
+`School` — полная карточка школы (директор, email, сайт, телефон и т.д.).

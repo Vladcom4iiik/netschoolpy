@@ -2,17 +2,20 @@
 
 ## Работа с вложениями (Attachments)
 
-NetSchool часто содержит файлы, прикрепленные к домашним заданиям. Библиотека позволяет получить ссылки на них.
+NetSchool часто содержит файлы, прикреплённые к домашним заданиям. Вложения находятся внутри заданий (`Assignment`), а задания — внутри уроков (`Lesson`).
 
 ```python
 diary = await ns.diary()
-for day in diary.days:
+for day in diary.schedule:
     for lesson in day.lessons:
-        if lesson.attachments:
-            for attachment in lesson.attachments:
-                print(f"Найдено вложение: {attachment.name}")
-                # Скачивание файла (примерный код, зависит от реализации http клиента)
-                # content = await ns.download(attachment)
+        for assignment in lesson.assignments:
+            if assignment.attachments:
+                for attachment in assignment.attachments:
+                    print(f"Найдено вложение: {attachment.name} (ID: {attachment.id})")
+                    # Скачивание файла:
+                    # from io import BytesIO
+                    # buf = BytesIO()
+                    # await ns.download_attachment(attachment.id, buf)
 ```
 
 ## Кастомные периоды
@@ -23,21 +26,13 @@ for day in diary.days:
 import datetime
 
 # Получить дневник за сентябрь
-start = datetime.date(2023, 9, 1)
-end = datetime.date(2023, 9, 30)
+start = datetime.date(2025, 9, 1)
+end = datetime.date(2025, 9, 30)
 
 month_diary = await ns.diary(start=start, end=end)
-print(f"Всего уроков за месяц: {sum(len(d.lessons) for d in month_diary.days)}")
+print(f"Всего уроков за месяц: {sum(len(d.lessons) for d in month_diary.schedule)}")
 ```
 
 ## Работа с несколькими учениками (Родительский аккаунт)
 
 *Функционал в разработке.* Если аккаунт является родительским и привязано несколько детей, API позволяет переключаться между ними.
-
-```python
-# Получить список детей (студентов)
-students = await ns.get_students()
-
-# Выбрать конкретного ребенка по ID
-await ns.select_student(students[0].id)
-```

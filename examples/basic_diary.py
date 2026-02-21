@@ -45,7 +45,8 @@ async def main():
                 qr = qrcode.QRCode()
                 qr.add_data(qr_data)
                 qr.print_ascii()
-                print("\nОтсканируйте QR-код в приложении Госуслуги -> Сканер")
+                print("\n⚠️  ВАЖНО: QR-код действителен только 1 минуту!")
+                print("Отсканируйте QR-код в приложении Госуслуги -> Сканер")
 
             await ns.login_via_gosuslugi_qr(qr_callback)
             
@@ -68,12 +69,13 @@ async def main():
         diary = await ns.diary()
         
         print("\nРасписание на неделю:")
-        for day in diary.days:
-            print(f"\nExample Day: {day.date}")
+        for day in diary.schedule:
+            print(f"\nExample Day: {day.day}")
             for lesson in day.lessons:
                 print(f"  {lesson.number}. {lesson.subject}")
-                if lesson.mark:
-                    print(f"     Оценка: {lesson.mark}")
+                for assignment in lesson.assignments:
+                    if assignment.mark:
+                        print(f"     Оценка: {assignment.mark}")
 
     except Exception as e:
         print(f"❌ Ошибка: {e}")

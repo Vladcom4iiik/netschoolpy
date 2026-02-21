@@ -22,7 +22,7 @@ async def main():
 
         # Получаем данные
         diary = await ns.diary()
-        print(f"Расписание загружено, дней: {len(diary.days)}")
+        print(f"Расписание загружено, дней: {len(diary.schedule)}")
 
     except Exception as e:
         print(f"Ошибка: {e}")

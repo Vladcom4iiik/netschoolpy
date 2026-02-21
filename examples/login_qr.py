@@ -25,7 +25,8 @@ async def main():
         qr = qrcode.QRCode()
         qr.add_data(qr_data)
         qr.print_ascii()  # Вывод QR-кода прямо в терминал
-        print("\nОтсканируйте этот код в мобильном приложении Госуслуги -> Сканер")
+        print("\n⚠️  ВАЖНО: QR-код действителен только 1 минуту!")
+        print("Отсканируйте этот код в мобильном приложении Госуслуги -> Сканер")
         print("(Ожидание сканирования...)\n")
 
     try:
@@ -37,7 +38,7 @@ async def main():
         print("QR-код успешно отсканирован! Вход выполнен.")
         
         diary = await ns.diary()
-        print(f"Дневник загружен: {len(diary.days)} дней.")
+        print(f"Дневник загружен: {len(diary.schedule)} дней.")
         
     except Exception as e:
         print(f"Ошибка: {e}")

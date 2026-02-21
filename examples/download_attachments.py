@@ -29,7 +29,8 @@ async def main():
                     import qrcode
                     async def qr_cb(data):
                         qr = qrcode.QRCode(); qr.add_data(data); qr.print_ascii()
-                        print("Сканируйте QR!")
+                        print("\n⚠️  ВАЖНО: QR-код действителен только 1 минуту!")
+                        print("Отсканируйте QR-код в приложении Госуслуги -> Сканер")
                     await ns.login_via_gosuslugi_qr(qr_cb)
                 except ImportError:
                     print("pip install qrcode")
@@ -45,13 +46,15 @@ async def main():
             diary = await ns.diary()
             print("Поиск вложений...")
             found = False
-            for day in diary.days:
-                for user_lesson in day.lessons:
-                     if user_lesson.attachments:
-                         found = True
-                         print(f"Предмет: {user_lesson.subject}")
-                         for a in user_lesson.attachments:
-                             print(f" - {a.name}")
+            for day in diary.schedule:
+                for lesson in day.lessons:
+                    for assignment in lesson.assignments:
+                        if assignment.attachments:
+                            found = True
+                            print(f"\nНайдено вложение по предмету: {lesson.subject} ({assignment.kind})")
+                            for attachment in assignment.attachments:
+                                print(f"  - {attachment.name} (ID: {attachment.id})")
+
             if not found:
                 print("Вложений не найдено")
         except Exception as e:
