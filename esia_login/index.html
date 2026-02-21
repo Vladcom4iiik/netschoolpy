@@ -8,11 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://vladcom4iiik.github.io/netschoolpy/models/">
+        <link rel="canonical" href="https://vladcom4iiik.github.io/netschoolpy/esia_login/">
       
       
-        <link rel="prev" href="../api/">
+        <link rel="prev" href="../advanced/">
       
+      
+        <link rel="next" href="../api/">
       
       
         
@@ -23,7 +25,7 @@
     
     
       
-        <title>Модели данных - NetschoolPy</title>
+        <title>Вход через Госуслуги (ESIA) - NetschoolPy</title>
       
     
     
@@ -74,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#_1" class="md-skip">
+        <a href="#esia" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Модели данных
+              Вход через Госуслуги (ESIA)
             
           </span>
         </div>
@@ -280,20 +282,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
@@ -314,7 +316,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -385,10 +387,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../esia_login/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Вход через Госуслуги (ESIA)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -404,6 +433,59 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Как это работает?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Пример кода
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Возможные проблемы
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -420,20 +502,20 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -454,7 +536,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -497,37 +579,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Модели данных
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../models/" class="md-nav__link">
         
   
   
@@ -543,70 +598,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#diary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Diary (Дневник)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#day" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Day (Учебный день)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lesson" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Lesson (Урок)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#attachment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Attachment (Вложение)
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -646,10 +637,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#diary" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Diary (Дневник)
+        Как это работает?
       
     </span>
   </a>
@@ -657,10 +648,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#day" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Day (Учебный день)
+        Пример кода
       
     </span>
   </a>
@@ -668,21 +659,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#lesson" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Lesson (Урок)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#attachment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Attachment (Вложение)
+        Возможные проблемы
       
     </span>
   </a>
@@ -709,40 +689,39 @@
   
 
 
-<h1 id="_1">Модели данных</h1>
-<p>Библиотека возвращает данные в виде объектов (dataclasses). Это позволяет удобно работать с полями через точку, а не через словари.</p>
-<h2 id="diary">Diary (Дневник)</h2>
-<p>Объект <code>Diary</code> содержит информацию о расписании и уроках на неделю или выбранный период.</p>
-<ul>
-<li><code>start</code> (datetime.date): Дата начала периода.</li>
-<li><code>end</code> (datetime.date): Дата конца периода.</li>
-<li><code>days</code> (List[Day]): Список дней.</li>
-</ul>
-<h2 id="day">Day (Учебный день)</h2>
-<ul>
-<li><code>date</code> (datetime.date): Дата.</li>
-<li><code>lessons</code> (List[Lesson]): Список уроков за этот день.</li>
-</ul>
-<h2 id="lesson">Lesson (Урок)</h2>
-<p>Представляет собой один слот в расписании.</p>
-<ul>
-<li><code>day</code> (datetime.date): Дата урока.</li>
-<li><code>number</code> (int): Порядковый номер урока (1, 2, 3...).</li>
-<li><code>subject</code> (str): Название предмета (например, "Алгебра").</li>
-<li><code>room</code> (str): Кабинет.</li>
-<li><code>teacher</code> (str): ФИО учителя.</li>
-<li><code>theme</code> (str): Тема урока (из плана).</li>
-<li><code>homework</code> (str): Текст домашнего задания.</li>
-<li><code>mark</code> (int | None): Оценка за урок (если есть).</li>
-<li><code>mark_type</code> (str | None): Тип оценки (например, "Ответ на уроке", "Контрольная работа").</li>
-</ul>
-<h2 id="attachment">Attachment (Вложение)</h2>
-<p>Если к домашнему заданию или объявлению прикреплены файлы.</p>
-<ul>
-<li><code>id</code> (int): ID файла.</li>
-<li><code>name</code> (str): Имя файла.</li>
-<li><code>link</code> (str): Ссылка для скачивания (требует авторизации).</li>
-</ul>
+<h1 id="esia">Вход через Госуслуги (ESIA)</h1>
+<p><code>netschoolpy</code> поддерживает вход в дневник через единую систему идентификации и аутентификации (ЕСИА / Госуслуги).</p>
+<h2 id="_1">Как это работает?</h2>
+<p>В отличие от обычной авторизации (где вы вводите логин и пароль от NetSchool), здесь используется ваш аккаунт Госуслуг.</p>
+<h2 id="_2">Пример кода</h2>
+<p>Для входа через Госуслуги используйте метод <code>login_esia</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">netschoolpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">NetSchool</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">url</span> <span class="o">=</span> <span class="s1">&#39;https://sgo.your-region.ru&#39;</span> <span class="c1"># Адрес вашего дневника</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">NetSchool</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="k">as</span> <span class="n">ns</span><span class="p">:</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="c1"># Вход через ESIA</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="k">await</span> <span class="n">ns</span><span class="o">.</span><span class="n">login_esia</span><span class="p">(</span><span class="s1">&#39;ваш_телефон_или_email&#39;</span><span class="p">,</span> <span class="s1">&#39;пароль_от_госуслуг&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="c1"># После успешного входа можно получать данные как обычно</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        <span class="n">diary</span> <span class="o">=</span> <span class="k">await</span> <span class="n">ns</span><span class="o">.</span><span class="n">diary</span><span class="p">()</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Дневник получен! Уроков: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">diary</span><span class="o">.</span><span class="n">days</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Важно</p>
+<p>Библиотека <strong>не сохраняет</strong> ваш логин и пароль. Они отправляются только на сервера Госуслуг для получения токена доступа.
+Если у вас включена <strong>двухфакторная аутентификация (2FA)</strong> на Госуслугах, вход через библиотеку может потребовать ввода кода из SMS (функционал ввода кода находится в разработке или может требовать ручного вмешательства).</p>
+</div>
+<h2 id="_3">Возможные проблемы</h2>
+<ol>
+<li><strong>Неверный регион:</strong> Убедитесь, что URL <code>NetSchool</code> (<code>https://sgo...</code>) поддерживает вход через Госуслуги (на странице входа должна быть кнопка "Войти через Госуслуги").</li>
+<li><strong>Капча:</strong> Если Госуслуги потребуют ввести капчу, библиотека выбросит исключение <code>AuthError</code>.</li>
+</ol>
 
 
 
