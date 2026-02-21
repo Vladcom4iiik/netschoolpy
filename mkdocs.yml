@@ -24,6 +24,8 @@ theme:
 nav:
   - Home: index.md
   - Guide: guide.md
+  - Advanced: advanced.md
+  - Data Models: models.md
   - API Reference: api.md
 
 markdown_extensions:

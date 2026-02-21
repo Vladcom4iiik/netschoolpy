@@ -7,7 +7,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="netschoolpy",
-    version="1.0.0",
+    version="1.0.1",
     description="Асинхронный клиент для «Сетевого города»",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -28,6 +28,12 @@ setup(
         "esia",
         "education",
         "api",
+        "web Education",
+        "ir-tech",
+        "электронный журнал",
+        "school",
+        "web2edu",
+        "region",
     ],
     packages=["netschoolpy"],
     package_data={"netschoolpy": ["py.typed"]},
