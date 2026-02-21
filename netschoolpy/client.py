@@ -670,99 +670,79 @@ class NetSchool:
     ) -> dict:
         """Подключается к SSE-потоку ESIA QR и ждёт события сканирования.
 
-        ESIA SSE не отправляет HTTP-заголовки до первого события,
-        поэтому httpx stream / aiohttp зависают.
-        Используем raw asyncio SSL-сокет.
+        Используем httpx streaming — он сам корректно обрабатывает
+        HTTP-заголовки, chunked transfer-encoding и SSL.
         """
-        from urllib.parse import urlparse
-
-        parsed = urlparse(sse_url)
-        host = parsed.hostname
-        path = parsed.path
-
-        cookie_parts = []
-        for cookie in esia_client.cookies.jar:
-            domain = cookie.domain or ""
-            if "esia" in domain or "gosuslugi" in domain or not domain:
-                cookie_parts.append(f"{cookie.name}={cookie.value}")
-        cookie_header = "; ".join(cookie_parts)
-
-        ctx = _ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = _ssl.CERT_NONE
-
-        reader, writer = await asyncio.open_connection(host, 443, ssl=ctx)
+        sse_timeout = httpx.Timeout(
+            connect=15.0,
+            read=float(timeout),
+            write=10.0,
+            pool=10.0,
+        )
 
         try:
-            request = (
-                f"GET {path} HTTP/1.1\r\n"
-                f"Host: {host}\r\n"
-                f"Accept: text/event-stream\r\n"
-                f"Cache-Control: no-cache\r\n"
-                f"User-Agent: Mozilla/5.0\r\n"
-                f"Cookie: {cookie_header}\r\n"
-                f"Connection: keep-alive\r\n"
-                f"\r\n"
-            )
-            writer.write(request.encode())
-            await writer.drain()
-
-            buffer = b""
-            while True:
-                chunk = await asyncio.wait_for(
-                    reader.read(8192), timeout=timeout,
-                )
-                if not chunk:
+            async with esia_client.stream(
+                "GET",
+                sse_url,
+                headers={
+                    "Accept": "text/event-stream",
+                    "Cache-Control": "no-cache",
+                },
+                timeout=sse_timeout,
+            ) as response:
+                if response.status_code != 200:
+                    body = (await response.aread()).decode(
+                        "utf-8", errors="replace",
+                    )[:500]
                     raise exceptions.LoginError(
-                        "SSE соединение закрыто сервером"
+                        f"SSE: HTTP {response.status_code}: {body}"
                     )
-                buffer += chunk
 
-                # Обрабатываем только завершённые строки (до \n).
-                # Незавершённый хвост остаётся в buffer на следующий цикл.
-                while b"\n" in buffer:
-                    line_bytes, buffer = buffer.split(b"\n", 1)
-                    line = line_bytes.decode("utf-8", errors="replace").strip()
+                buffer = ""
+                async for text_chunk in response.aiter_text():
+                    buffer += text_chunk
 
-                    if not line.startswith("data:"):
-                        continue
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        line = line.strip()
 
-                    data_str = line[5:].strip()
-                    if not data_str:
-                        continue
+                        if not line.startswith("data:"):
+                            continue
 
-                    try:
-                        data = json.loads(data_str)
-                    except (json.JSONDecodeError, ValueError):
-                        # Неполный или невалидный JSON — пропускаем
-                        continue
+                        data_str = line[5:].strip()
+                        if not data_str:
+                            continue
 
-                    error = data.get("error", {})
-                    code = (
-                        error.get("code", "")
-                        if isinstance(error, dict)
-                        else ""
-                    )
-                    if code in (
-                        "QR_AUTHORIZATION_SESSION_EXPIRED",
-                        "QR_CODE_SESSION_NOT_FOUND",
-                        "QR_CODE_SESSION_OUTDATED",
-                    ):
-                        raise exceptions.LoginError(
-                            f"QR сессия истекла: {code}"
+                        try:
+                            data = json.loads(data_str)
+                        except (json.JSONDecodeError, ValueError):
+                            continue
+
+                        error = data.get("error", {})
+                        code = (
+                            error.get("code", "")
+                            if isinstance(error, dict)
+                            else ""
                         )
-                    return data
+                        if code in (
+                            "QR_AUTHORIZATION_SESSION_EXPIRED",
+                            "QR_CODE_SESSION_NOT_FOUND",
+                            "QR_CODE_SESSION_OUTDATED",
+                        ):
+                            raise exceptions.LoginError(
+                                f"QR сессия истекла: {code}"
+                            )
+                        return data
 
-        except asyncio.TimeoutError:
+            # Поток завершился без данных
+            raise exceptions.LoginError(
+                "SSE поток завершился без данных о сканировании"
+            )
+
+        except httpx.TimeoutException:
             raise exceptions.LoginError(
                 "Таймаут ожидания QR сканирования"
-            )
-        finally:
-            writer.close()
-            try:
-                await writer.wait_closed()
-            except Exception:
-                pass
+            ) from None
 
     # ── MFA-обработка ────────────────────────────────────────
 
