@@ -52,16 +52,21 @@ async def main():
             print(f"Считаем средний балл с {start} по {end}...")
 
             diary = await ns.diary(start=start, end=end)
-            all_marks = []
+            all_marks = []  # (mark, weight)
             
             for day in diary.schedule:
                 for lesson in day.lessons:
                     for assignment in lesson.assignments:
                         if assignment.mark:
-                            all_marks.append(assignment.mark)
+                            all_marks.append((assignment.mark, assignment.weight))
             
             if all_marks:
-                print(f"Средний балл: {sum(all_marks)/len(all_marks):.2f}")
+                simple_avg = sum(m for m, _ in all_marks) / len(all_marks)
+                weighted_sum = sum(m * w for m, w in all_marks)
+                weight_total = sum(w for _, w in all_marks)
+                weighted_avg = weighted_sum / weight_total if weight_total else 0
+                print(f"Простой средний балл: {simple_avg:.2f}")
+                print(f"Средневзвешенный балл: {weighted_avg:.2f}")
             else:
                 print("Оценок нет.")
         except Exception as e:

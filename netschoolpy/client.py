@@ -20,6 +20,8 @@ from netschoolpy.models import (
     Assignment,
     Attachment,
     Diary,
+    MailRecipient,
+    Message,
     School,
     ShortSchool,
 )
@@ -44,7 +46,7 @@ class NetSchool:
         self._year_id: int = -1
         self._school_id: int = -1
 
-        self._assignment_types: Dict[int, str] = {}
+        self._assignment_types: Dict[int, dict] = {}
         self._credentials: tuple = ()
         self._access_token: Optional[str] = None
 
@@ -132,12 +134,13 @@ class NetSchool:
         resp = await self._http.get("years/current", timeout=timeout)
         self._year_id = resp.json()["id"]
 
-        # assignment types
+        # assignment types (name + abbreviation)
         resp = await self._http.get(
             "grade/assignment/types", params={"all": False}, timeout=timeout,
         )
         self._assignment_types = {
-            a["id"]: a["name"] for a in resp.json()
+            a["id"]: {"name": a["name"], "abbr": a.get("abbr", "")}
+            for a in resp.json()
         }
 
         self._credentials = (user_name, password, school)
@@ -978,7 +981,10 @@ class NetSchool:
         resp = await self._http.get(
             "grade/assignment/types", params={"all": False}, timeout=timeout,
         )
-        self._assignment_types = {a["id"]: a["name"] for a in resp.json()}
+        self._assignment_types = {
+            a["id"]: {"name": a["name"], "abbr": a.get("abbr", "")}
+            for a in resp.json()
+        }
 
     async def login_with_token(
         self,
@@ -1266,7 +1272,7 @@ class NetSchool:
         )
         buffer.write(resp.content)
 
-    # ── Школы ────────────────────────────────────────────────
+    # ══ Школы ════════════════════════════════════════════════
 
     async def schools(self, *, timeout: int | None = None) -> List[ShortSchool]:
         """Список доступных школ."""
@@ -1290,6 +1296,89 @@ class NetSchool:
                 self._school_id = s["id"]
                 return s["id"]
         raise exceptions.SchoolNotFound(school_name)
+
+    # ═══════════════════════════════════════════════════════════
+    #  Почта / сообщения
+    # ═══════════════════════════════════════════════════════════
+
+    async def mail_unread(
+        self, *, timeout: int | None = None,
+    ) -> List[int]:
+        """Список ID непрочитанных писем.
+
+        Returns:
+            Список целочисленных ID непрочитанных сообщений.
+        """
+        resp = await self._authed_get(
+            "mail/messages/unread",
+            params={"userId": self._student_id},
+            timeout=timeout,
+        )
+        return resp.json()
+
+    async def mail_read(
+        self, message_id: int, *, timeout: int | None = None,
+    ) -> Message:
+        """Прочитать письмо по ID.
+
+        Args:
+            message_id: ID сообщения (можно получить из ``mail_unread()``).
+
+        Returns:
+            Объект ``Message`` с полным содержимым письма.
+        """
+        resp = await self._authed_get(
+            f"mail/messages/{message_id}/read",
+            params={"userId": self._student_id},
+            timeout=timeout,
+        )
+        return Message.from_raw(resp.json())
+
+    async def mail_recipients(
+        self, *, timeout: int | None = None,
+    ) -> List[MailRecipient]:
+        """Список доступных получателей писем (учителя, администрация)."""
+        resp = await self._authed_get(
+            "mail/recipients",
+            params={
+                "userId": self._student_id,
+                "organizationId": self._school_id,
+                "funcType": 2,
+                "orgType": 1,
+                "group": 1,
+            },
+            timeout=timeout,
+        )
+        return [MailRecipient.from_raw(r) for r in resp.json()]
+
+    async def mail_send(
+        self,
+        subject: str,
+        text: str,
+        to: List[str],
+        *,
+        timeout: int | None = None,
+    ) -> None:
+        """Отправить письмо.
+
+        Args:
+            subject: Тема письма.
+            text: Текст письма.
+            to: Список ID получателей (из ``mail_recipients()``).
+        """
+        await self._authed_post(
+            "mail/messages/send",
+            json={
+                "subject": subject,
+                "text": text,
+                "to": [{"id": r} for r in to],
+                "cc": [],
+                "bcc": [],
+                "notify": False,
+                "fileAttachments": [],
+            },
+            timeout=timeout,
+        )
 
     # ── Выход ────────────────────────────────────────────────
 

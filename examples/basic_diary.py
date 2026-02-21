@@ -75,7 +75,7 @@ async def main():
                 print(f"  {lesson.number}. {lesson.subject}")
                 for assignment in lesson.assignments:
                     if assignment.mark:
-                        print(f"     Оценка: {assignment.mark}")
+                        print(f"     Оценка: {assignment.mark} (вес: {assignment.weight}, тип: {assignment.kind_abbr})")
 
     except Exception as e:
         print(f"❌ Ошибка: {e}")

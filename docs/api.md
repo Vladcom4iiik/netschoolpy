@@ -72,6 +72,28 @@ async with NetSchool("https://sgo.example.ru") as ns:
 
 Скачать аватар пользователя в `BytesIO`-буфер.
 
+### `mail_unread(*, timeout=None)`
+
+Получить список ID непрочитанных писем. Возвращает `List[int]`.
+
+### `mail_read(message_id, *, timeout=None)`
+
+Прочитать письмо по ID. Возвращает `Message`.
+
+- `message_id` (int): ID сообщения (можно получить из `mail_unread()`).
+
+### `mail_recipients(*, timeout=None)`
+
+Список доступных получателей писем (учителя, администрация). Возвращает `List[MailRecipient]`.
+
+### `mail_send(subject, text, to, *, timeout=None)`
+
+Отправить письмо.
+
+- `subject` (str): Тема.
+- `text` (str): Текст.
+- `to` (List[str]): Список ID получателей (из `mail_recipients()`).
+
 ### `logout(*, timeout=None)`
 
 Завершение сессии.

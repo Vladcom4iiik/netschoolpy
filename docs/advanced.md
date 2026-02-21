@@ -36,3 +36,97 @@ print(f"Всего уроков за месяц: {sum(len(d.lessons) for d in mo
 ## Работа с несколькими учениками (Родительский аккаунт)
 
 *Функционал в разработке.* Если аккаунт является родительским и привязано несколько детей, API позволяет переключаться между ними.
+
+## Средневзвешенный балл
+
+Каждое задание имеет `weight` (вес/коэффициент). Контрольные обычно весят больше, чем домашние задания. Используйте это для точного подсчёта среднего балла:
+
+```python
+diary = await ns.diary(start=start, end=end)
+
+marks = []
+for day in diary.schedule:
+    for lesson in day.lessons:
+        for a in lesson.assignments:
+            if a.mark:
+                marks.append((a.mark, a.weight))
+
+if marks:
+    simple_avg = sum(m for m, _ in marks) / len(marks)
+    weighted_sum = sum(m * w for m, w in marks)
+    weight_total = sum(w for _, w in marks)
+    weighted_avg = weighted_sum / weight_total
+
+    print(f"Простой средний: {simple_avg:.2f}")
+    print(f"Средневзвешенный: {weighted_avg:.2f}")
+```
+
+## Типы заданий
+
+Каждое задание имеет поле `kind` (полное название типа) и `kind_abbr` (сокращение):
+
+| Сокращение | Тип задания |
+|---|---|
+| О | Ответ на уроке |
+| К | Контрольная работа |
+| ДЗ | Домашнее задание |
+| С | Самостоятельная работа |
+| Т | Тестирование |
+| Л | Лабораторная работа |
+| П | Проект |
+| Д | Диктант |
+| Р | Реферат |
+| Ч | Сочинение |
+| И | Изложение |
+| З | Зачёт |
+
+```python
+for day in diary.schedule:
+    for lesson in day.lessons:
+        for a in lesson.assignments:
+            if a.mark:
+                print(f"[{a.kind_abbr}] {a.kind}: {a.mark} (вес: {a.weight})")
+```
+
+## Внутренняя почта
+
+Библиотека поддерживает внутреннюю почту «Сетевого Города».
+
+### Непрочитанные письма
+
+```python
+unread_ids = await ns.mail_unread()
+print(f"Непрочитанных: {len(unread_ids)}")
+```
+
+### Чтение письма
+
+```python
+for msg_id in unread_ids:
+    msg = await ns.mail_read(msg_id)
+    print(f"От: {msg.author_name}")
+    print(f"Тема: {msg.subject}")
+    print(f"Текст: {msg.text}")
+    print(f"Дата: {msg.sent}")
+    print(f"Файлы: {len(msg.file_attachments)}")
+```
+
+### Список получателей
+
+```python
+recipients = await ns.mail_recipients()
+for r in recipients:
+    print(f"{r.name} {r.organization_name}")
+```
+
+### Отправка письма
+
+```python
+recipients = await ns.mail_recipients()
+# Отправить первому получателю
+await ns.mail_send(
+    subject="Привет!",
+    text="Текст письма.",
+    to=[recipients[0].id],
+)
+```

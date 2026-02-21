@@ -67,7 +67,8 @@ for day in diary.schedule:
         print(f"  {lesson.number}. {lesson.subject}")
         for assignment in lesson.assignments:
             if assignment.mark:
-                print(f"     Оценка: {assignment.mark}")
+                print(f"     Оценка: {assignment.mark} (вес: {assignment.weight})")
+                print(f"     Тип: {assignment.kind} [{assignment.kind_abbr}]")
 ```
 
 ## Обработка ошибок
@@ -85,3 +86,21 @@ except LoginError:
 except SchoolNotFound:
     print("Школа не найдена")
 ```
+
+## Внутренняя почта
+
+Библиотека поддерживает внутреннюю почту «Сетевого Города»:
+
+```python
+# Непрочитанные письма
+unread_ids = await ns.mail_unread()
+
+# Прочитать письмо
+for msg_id in unread_ids:
+    msg = await ns.mail_read(msg_id)
+    print(f"От: {msg.author_name}")
+    print(f"Тема: {msg.subject}")
+    print(f"Текст: {msg.text}")
+```
+
+Подробнее см. в [Продвинутое использование](advanced.md).
