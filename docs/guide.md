@@ -23,6 +23,24 @@ async with NetSchool('https://your-netschool-url.ru') as ns:
 await ns.login_via_gosuslugi('gosuslugi_login', 'gosuslugi_password')
 ```
 
+### Вход через QR-код Госуслуг
+
+Самый удобный способ — без ввода логина и пароля. Нужно отсканировать QR-код в мобильном приложении «Госуслуги».
+
+```python
+async def show_qr(qr_data: str):
+    import qrcode
+    qr = qrcode.QRCode()
+    qr.add_data(qr_data)
+    qr.print_ascii()
+    print("⚠️  QR-код действителен 1 минуту!")
+    print("Отсканируйте в приложении Госуслуги → Сканер")
+
+await ns.login_via_gosuslugi_qr(qr_callback=show_qr, qr_timeout=120)
+```
+
+Подробнее: [Вход через Госуслуги](esia_login.md).
+
 ## Получение дневника
 
 Основная функция – получение дневника.
