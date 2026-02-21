@@ -1,0 +1,30 @@
+from setuptools import setup
+
+
+with open("README.md", encoding="utf-8") as f:
+    long_description = f.read()
+
+
+setup(
+    name="netschoolpy",
+    version="1.0.0",
+    description="Асинхронный клиент для «Сетевого города»",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    author="Vladcom4iiik",
+    url="https://github.com/Vladcom4iiik/netschoolpy",
+    packages=["netschoolpy"],
+    package_data={"netschoolpy": ["py.typed"]},
+    classifiers=[
+        "Natural Language :: Russian",
+        "Topic :: Education",
+        "Programming Language :: Python :: 3",
+    ],
+    install_requires=[
+        "httpx>=0.23",
+    ],
+    extras_require={
+        "qr": ["qrcode>=7.0"],
+    },
+    python_requires=">=3.10",
+)
