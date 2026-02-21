@@ -13,6 +13,22 @@ setup(
     long_description_content_type="text/markdown",
     author="Vladcom4iiik",
     url="https://github.com/Vladcom4iiik/netschoolpy",
+    project_urls={
+        "Source": "https://github.com/Vladcom4iiik/netschoolpy",
+        "Issues": "https://github.com/Vladcom4iiik/netschoolpy/issues",
+    },
+    license="Proprietary",
+    keywords=[
+        "netschool",
+        "netschoolpy",
+        "sgo",
+        "сетевой город",
+        "дневник",
+        "госуслуги",
+        "esia",
+        "education",
+        "api",
+    ],
     packages=["netschoolpy"],
     package_data={"netschoolpy": ["py.typed"]},
     classifiers=[
