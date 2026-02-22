@@ -511,13 +511,13 @@ class NetSchool:
                 "referer": "https://esia.gosuslugi.ru/login/",
             }
 
-            max_qr_retries = 3
+            max_qr_retries = 5
             login_data: dict = {}
             signed_token = ""
 
             for qr_attempt in range(1, max_qr_retries + 1):
                 if qr_attempt > 1:
-                    # Переинициализировать crosslogin (старая ESIA_SESSION истекла)
+                    # Переинициализировать crosslogin (ESIA_SESSION протухает после ошибки SSE)
                     esia_client.cookies.clear()
                     await esia_client.get(f"{sgo_origin}/webapi/logindata")
                     url = f"{sgo_origin}/webapi/sso/esia/crosslogin"
@@ -599,11 +599,13 @@ class NetSchool:
                     break  # Успешно получили данные
                 except exceptions.LoginError as e:
                     if "ESIA-007110" in str(e) and qr_attempt < max_qr_retries:
+                        delay = qr_attempt * 2  # 2, 4, 6, 8 сек
                         print(
-                            f"\n⚠️  ESIA вернула ошибку, "
-                            f"перегенерация QR ({qr_attempt}/{max_qr_retries})..."
+                            f"\n⚠️  ESIA вернула ошибку 007110, "
+                            f"повтор {qr_attempt}/{max_qr_retries} "
+                            f"через {delay}с..."
                         )
-                        await asyncio.sleep(2)
+                        await asyncio.sleep(delay)
                         continue
                     raise
 
@@ -741,84 +743,108 @@ class NetSchool:
     ) -> dict:
         """Подключается к SSE-потоку ESIA QR и ждёт события сканирования.
 
-        Используем httpx streaming — он сам корректно обрабатывает
-        HTTP-заголовки, chunked transfer-encoding и SSL.
+        ESIA SSE не отправляет HTTP-заголовки до первого события,
+        поэтому httpx stream / aiohttp зависают.
+        Используем raw asyncio SSL-сокет.
         """
-        sse_timeout = httpx.Timeout(
-            connect=15.0,
-            read=float(timeout),
-            write=10.0,
-            pool=10.0,
-        )
+        from urllib.parse import urlparse
+
+        parsed = urlparse(sse_url)
+        host = parsed.hostname
+        path = parsed.path
+
+        cookie_parts = []
+        for cookie in esia_client.cookies.jar:
+            domain = cookie.domain or ""
+            if "esia" in domain or "gosuslugi" in domain or not domain:
+                cookie_parts.append(f"{cookie.name}={cookie.value}")
+        cookie_header = "; ".join(cookie_parts)
+
+        ctx = _ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = _ssl.CERT_NONE
+
+        reader, writer = await asyncio.open_connection(host, 443, ssl=ctx)
 
         try:
-            async with esia_client.stream(
-                "GET",
-                sse_url,
-                headers={
-                    "Accept": "text/event-stream",
-                    "Cache-Control": "no-cache",
-                },
-                timeout=sse_timeout,
-            ) as response:
-                if response.status_code != 200:
-                    body = (await response.aread()).decode(
-                        "utf-8", errors="replace",
-                    )[:500]
+            request = (
+                f"GET {path} HTTP/1.1\r\n"
+                f"Host: {host}\r\n"
+                f"Accept: text/event-stream\r\n"
+                f"Cache-Control: no-cache\r\n"
+                f"User-Agent: Mozilla/5.0\r\n"
+                f"Cookie: {cookie_header}\r\n"
+                f"Connection: keep-alive\r\n"
+                f"\r\n"
+            )
+            writer.write(request.encode())
+            await writer.drain()
+
+            buffer = b""
+            while True:
+                chunk = await asyncio.wait_for(
+                    reader.read(8192), timeout=timeout,
+                )
+                if not chunk:
                     raise exceptions.LoginError(
-                        f"SSE: HTTP {response.status_code}: {body}"
+                        "SSE соединение закрыто сервером"
                     )
+                buffer += chunk
 
-                buffer = ""
-                async for text_chunk in response.aiter_text():
-                    buffer += text_chunk
+                # Обрабатываем только завершённые строки (до \n).
+                # Незавершённый хвост остаётся в buffer на следующий цикл.
+                while b"\n" in buffer:
+                    line_bytes, buffer = buffer.split(b"\n", 1)
+                    line = line_bytes.decode("utf-8", errors="replace").strip()
 
-                    while "\n" in buffer:
-                        line, buffer = buffer.split("\n", 1)
-                        line = line.strip()
+                    if not line.startswith("data:"):
+                        continue
 
-                        if not line.startswith("data:"):
-                            continue
+                    data_str = line[5:].strip()
+                    if not data_str:
+                        continue
 
-                        data_str = line[5:].strip()
-                        if not data_str:
-                            continue
+                    try:
+                        data = json.loads(data_str)
+                    except (json.JSONDecodeError, ValueError):
+                        # Неполный или невалидный JSON — пропускаем
+                        continue
 
-                        try:
-                            data = json.loads(data_str)
-                        except (json.JSONDecodeError, ValueError):
-                            continue
-
-                        error = data.get("error", {})
-                        code = (
-                            error.get("code", "")
+                    error = data.get("error", {})
+                    code = (
+                        error.get("code", "")
+                        if isinstance(error, dict)
+                        else ""
+                    )
+                    if code in (
+                        "QR_AUTHORIZATION_SESSION_EXPIRED",
+                        "QR_CODE_SESSION_NOT_FOUND",
+                        "QR_CODE_SESSION_OUTDATED",
+                    ):
+                        raise exceptions.LoginError(
+                            f"QR сессия истекла: {code}"
+                        )
+                    if code:
+                        msg = (
+                            error.get("message", "")
                             if isinstance(error, dict)
                             else ""
                         )
-                        if code in (
-                            "QR_AUTHORIZATION_SESSION_EXPIRED",
-                            "QR_CODE_SESSION_NOT_FOUND",
-                            "QR_CODE_SESSION_OUTDATED",
-                        ):
-                            raise exceptions.LoginError(
-                                f"QR сессия истекла: {code}"
-                            )
-                        if code:
-                            msg = error.get("message", "") if isinstance(error, dict) else ""
-                            raise exceptions.LoginError(
-                                f"Ошибка ESIA при QR-входе: {code} — {msg}"
-                            )
-                        return data
+                        raise exceptions.LoginError(
+                            f"Ошибка ESIA при QR-входе: {code} — {msg}"
+                        )
+                    return data
 
-            # Поток завершился без данных
-            raise exceptions.LoginError(
-                "SSE поток завершился без данных о сканировании"
-            )
-
-        except httpx.TimeoutException:
+        except asyncio.TimeoutError:
             raise exceptions.LoginError(
                 "Таймаут ожидания QR сканирования"
-            ) from None
+            )
+        finally:
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except Exception:
+                pass
 
     # ── MFA-обработка ────────────────────────────────────────
 
