@@ -156,8 +156,13 @@ async def main():
         elif method == "esia":
             esia_login = os.getenv("ESIA_LOGIN", "")
             esia_password = os.getenv("ESIA_PASSWORD", "")
+            if not esia_login:
+                esia_login = input(f"  {CYAN}Логин Госуслуг (телефон/email/СНИЛС): {RESET}").strip()
+            if not esia_password:
+                import getpass
+                esia_password = getpass.getpass(f"  {CYAN}Пароль Госуслуг: {RESET}").strip()
             if not esia_login or not esia_password:
-                fail("ESIA_LOGIN / ESIA_PASSWORD не заданы")
+                fail("Логин и/или пароль не введены")
                 sys.exit(1)
             info(f"Метод: ESIA логин/пароль ({esia_login[:3]}***)")
             await ns.login_via_gosuslugi(esia_login, esia_password)

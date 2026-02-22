@@ -504,68 +504,108 @@ class NetSchool:
                     esia_session = cookie.value
                     break
 
-            # === ШАГ 2: Сгенерировать QR-код ===
+            # === ШАГ 2–3: Сгенерировать QR и ждать сканирования (с retry) ===
             esia_headers = {
                 "content-type": "application/json",
                 "origin": "https://esia.gosuslugi.ru",
                 "referer": "https://esia.gosuslugi.ru/login/",
             }
 
-            body = None
-            if esia_session:
-                body = {"esia_session": esia_session}
+            max_qr_retries = 3
+            login_data: dict = {}
+            signed_token = ""
 
-            qr_resp = await esia_client.post(
-                "https://esia.gosuslugi.ru/qr-delegate/qr/generate",
-                json=body,
-                headers=esia_headers,
-            )
-            if qr_resp.status_code != 200:
-                raise exceptions.LoginError(
-                    f"Не удалось сгенерировать QR-код: "
-                    f"{qr_resp.status_code} {qr_resp.text[:300]}"
+            for qr_attempt in range(1, max_qr_retries + 1):
+                if qr_attempt > 1:
+                    # Переинициализировать crosslogin (старая ESIA_SESSION истекла)
+                    esia_client.cookies.clear()
+                    await esia_client.get(f"{sgo_origin}/webapi/logindata")
+                    url = f"{sgo_origin}/webapi/sso/esia/crosslogin"
+                    for _ in range(20):
+                        r = await esia_client.get(url)
+                        for h in r.headers.get_list("set-cookie"):
+                            p = h.split(";")[0].split("=", 1)
+                            if len(p) == 2:
+                                esia_client.cookies.set(p[0].strip(), p[1].strip())
+                        if r.status_code in (301, 302, 303, 307, 308):
+                            loc = r.headers.get("location", "")
+                            if not loc.startswith("http"):
+                                loc = urljoin(str(r.url), loc)
+                            url = loc
+                        else:
+                            break
+                    esia_session = None
+                    for cookie in esia_client.cookies.jar:
+                        if cookie.name == "ESIA_SESSION":
+                            esia_session = cookie.value
+                            break
+
+                body = None
+                if esia_session:
+                    body = {"esia_session": esia_session}
+
+                qr_resp = await esia_client.post(
+                    "https://esia.gosuslugi.ru/qr-delegate/qr/generate",
+                    json=body,
+                    headers=esia_headers,
                 )
-
-            qr_data = qr_resp.json()
-            signed_token = qr_data.get("signed_token", "")
-            qr_id = qr_data.get("qr_id", "")
-            if not signed_token or not qr_id:
-                raise exceptions.LoginError(
-                    f"ESIA не вернула QR данные: {qr_data}"
-                )
-
-            # Deep-link для мобильного приложения «Госуслуги»
-            qr_content = f"gosuslugi://auth/signed_token={signed_token}"
-
-            # Показываем QR пользователю ДО ожидания сканирования
-            if qr_callback is not None:
-                if asyncio.iscoroutinefunction(qr_callback):
-                    await qr_callback(qr_content)
-                else:
-                    qr_callback(qr_content)
-            else:
-                try:
-                    import qrcode as _qr
-                    q = _qr.QRCode(error_correction=_qr.constants.ERROR_CORRECT_L)
-                    q.add_data(qr_content)
-                    q.make(fit=True)
-                    print("\n📱 Отсканируйте QR-код в приложении «Госуслуги»:")
-                    q.print_ascii(invert=True)
-                except ImportError:
-                    print(
-                        f"\n📱 Отсканируйте QR-код в приложении «Госуслуги».\n"
-                        f"   Содержимое для QR: {qr_content[:80]}...\n"
+                if qr_resp.status_code != 200:
+                    raise exceptions.LoginError(
+                        f"Не удалось сгенерировать QR-код: "
+                        f"{qr_resp.status_code} {qr_resp.text[:300]}"
                     )
 
-            # === ШАГ 3: Подписаться на SSE и ждать сканирования ===
-            sse_url = (
-                f"https://esia.gosuslugi.ru"
-                f"/qr-delegate/qr/subscribe/{qr_id}"
-            )
+                qr_data = qr_resp.json()
+                signed_token = qr_data.get("signed_token", "")
+                qr_id = qr_data.get("qr_id", "")
+                if not signed_token or not qr_id:
+                    raise exceptions.LoginError(
+                        f"ESIA не вернула QR данные: {qr_data}"
+                    )
 
-            login_data = await self._poll_esia_qr_sse(
-                esia_client, sse_url, qr_timeout,
-            )
+                # Deep-link для мобильного приложения «Госуслуги»
+                qr_content = f"gosuslugi://auth/signed_token={signed_token}"
+
+                # Показываем QR пользователю ДО ожидания сканирования
+                if qr_callback is not None:
+                    if asyncio.iscoroutinefunction(qr_callback):
+                        await qr_callback(qr_content)
+                    else:
+                        qr_callback(qr_content)
+                else:
+                    try:
+                        import qrcode as _qr
+                        q = _qr.QRCode(error_correction=_qr.constants.ERROR_CORRECT_L)
+                        q.add_data(qr_content)
+                        q.make(fit=True)
+                        print("\n📱 Отсканируйте QR-код в приложении «Госуслуги»:")
+                        q.print_ascii(invert=True)
+                    except ImportError:
+                        print(
+                            f"\n📱 Отсканируйте QR-код в приложении «Госуслуги».\n"
+                            f"   Содержимое для QR: {qr_content[:80]}...\n"
+                        )
+
+                # Подписаться на SSE и ждать сканирования
+                sse_url = (
+                    f"https://esia.gosuslugi.ru"
+                    f"/qr-delegate/qr/subscribe/{qr_id}"
+                )
+
+                try:
+                    login_data = await self._poll_esia_qr_sse(
+                        esia_client, sse_url, qr_timeout,
+                    )
+                    break  # Успешно получили данные
+                except exceptions.LoginError as e:
+                    if "ESIA-007110" in str(e) and qr_attempt < max_qr_retries:
+                        print(
+                            f"\n⚠️  ESIA вернула ошибку, "
+                            f"перегенерация QR ({qr_attempt}/{max_qr_retries})..."
+                        )
+                        await asyncio.sleep(2)
+                        continue
+                    raise
 
             redirect_url = login_data.get("redirect_url")
             action = login_data.get("action", "")
@@ -1010,6 +1050,15 @@ class NetSchool:
         """Загрузка данных после успешной авторизации (год, типы заданий)."""
         resp = await self._http.get("years/current", timeout=timeout)
         self._year_id = resp.json()["id"]
+
+        # Если school_id ещё не установлен (ESIA/QR/token-вход),
+        # получаем его из /context
+        if self._school_id <= 0:
+            try:
+                ctx_resp = await self._http.get("context", timeout=timeout)
+                self._school_id = ctx_resp.json().get("schoolId", -1)
+            except Exception:
+                pass
 
         resp = await self._http.get(
             "grade/assignment/types", params={"all": False}, timeout=timeout,
