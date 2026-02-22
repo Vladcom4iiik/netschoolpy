@@ -92,15 +92,24 @@ except SchoolNotFound:
 Библиотека поддерживает внутреннюю почту «Сетевого Города»:
 
 ```python
-# Непрочитанные письма
-unread_ids = await ns.mail_unread()
+# Список писем (входящие, первая страница)
+page = await ns.mail_list("Inbox", page=1, page_size=20)
+print(f"Всего писем: {page.total_items}")
+for entry in page.entries:
+    print(f"  {entry.sent} | {entry.author} | {entry.subject}")
 
-# Прочитать письмо
-for msg_id in unread_ids:
-    msg = await ns.mail_read(msg_id)
-    print(f"От: {msg.author_name}")
-    print(f"Тема: {msg.subject}")
-    print(f"Текст: {msg.text}")
+# Прочитать конкретное письмо (текст + вложения)
+msg = await ns.mail_read(page.entries[0].id)
+print(f"Текст: {msg.text}")
+
+# Скачать вложения из письма
+from io import BytesIO
+for att in msg.file_attachments:
+    buf = BytesIO()
+    await ns.download_attachment(att.id, buf)
+    with open(att.name, "wb") as f:
+        f.write(buf.getvalue())
+    print(f"Скачан: {att.name} ({len(buf.getvalue())} байт)")
 ```
 
 Подробнее см. в [Продвинутое использование](advanced.md).

@@ -20,6 +20,8 @@ from netschoolpy.models import (
     Assignment,
     Attachment,
     Diary,
+    MailEntry,
+    MailPage,
     MailRecipient,
     Message,
     School,
@@ -1300,6 +1302,61 @@ class NetSchool:
     # ═══════════════════════════════════════════════════════════
     #  Почта / сообщения
     # ═══════════════════════════════════════════════════════════
+
+    async def mail_list(
+        self,
+        folder: str = "Inbox",
+        page: int = 1,
+        page_size: int = 20,
+        *,
+        timeout: int | None = None,
+    ) -> MailPage:
+        """Получить список писем из указанной папки.
+
+        Args:
+            folder: Папка — ``"Inbox"`` (входящие, по-умолчанию),
+                ``"Sent"`` (отправленные), ``"Draft"`` (черновики),
+                ``"Deleted"`` (удалённые).
+            page: Номер страницы (начиная с 1).
+            page_size: Количество писем на странице.
+
+        Returns:
+            Объект ``MailPage`` с полями ``entries`` (список ``MailEntry``),
+            ``page`` и ``total_items``.
+        """
+        folder_labels = {
+            "Inbox": "Входящие",
+            "Sent": "Отправленные",
+            "Draft": "Черновики",
+            "Deleted": "Удалённые",
+        }
+        resp = await self._authed_post(
+            "mail/registry",
+            json={
+                "filterContext": {
+                    "selectedData": [
+                        {
+                            "filterId": "MailBox",
+                            "filterValue": folder,
+                            "filterText": folder_labels.get(folder, folder),
+                        },
+                        {
+                            "filterId": "MessageType",
+                            "filterValue": "All",
+                            "filterText": "Все",
+                        },
+                    ],
+                    "params": None,
+                },
+                "fields": ["author", "subject", "sent"],
+                "page": page,
+                "pageSize": page_size,
+                "search": None,
+                "order": {"fieldId": "sent", "ascending": False},
+            },
+            timeout=timeout,
+        )
+        return MailPage.from_raw(resp.json())
 
     async def mail_unread(
         self, *, timeout: int | None = None,

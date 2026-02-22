@@ -16,10 +16,26 @@ def _parse_date(value: Any) -> datetime.date:
 
 
 def _parse_datetime(value: Any) -> datetime.datetime:
-    """Парсит datetime из ISO-строки."""
+    """Парсит datetime из ISO-строки.
+
+    SGO может возвращать дробные секунды с различным количеством
+    цифр (например ``10:51:34.99``), что ломает ``fromisoformat``
+    в Python < 3.11.  Нормализуем до 6 цифр (микросекунды).
+    """
     if isinstance(value, datetime.datetime):
         return value
-    return datetime.datetime.fromisoformat(str(value))
+    s = str(value)
+    # Нормализуем дробную часть секунд до 6 цифр
+    import re as _re
+    m = _re.match(r'^(.+\.\d{1,6}?)(\d*)(.*)$', s)
+    if m:
+        frac = m.group(1)
+        # дополняем до 6 цифр после точки
+        dot_idx = frac.rfind('.')
+        digits_after = frac[dot_idx + 1:]
+        frac = frac[:dot_idx + 1] + digits_after.ljust(6, '0')
+        s = frac + m.group(3)
+    return datetime.datetime.fromisoformat(s)
 
 
 def _parse_time(value: Any) -> datetime.time:
@@ -41,9 +57,12 @@ class Attachment:
 
     @classmethod
     def from_raw(cls, data: dict) -> Attachment:
+        # В заданиях имя файла в "originalFileName",
+        # в почтовых вложениях — в "name".
+        name = data.get("originalFileName") or data.get("name") or ""
         return cls(
             id=data["id"],
-            name=data.get("originalFileName", ""),
+            name=name,
             description=data.get("description") or "",
         )
 
@@ -272,6 +291,42 @@ class School:
 
 
 # ─────────────────────────── Почта / сообщения ─────────────────────
+
+@dataclass(frozen=True)
+class MailEntry:
+    """Краткая запись о письме (из списка/реестра)."""
+    id: int
+    subject: str
+    author: str
+    sent: datetime.datetime
+    to_names: Optional[str]
+
+    @classmethod
+    def from_raw(cls, data: dict) -> MailEntry:
+        return cls(
+            id=int(data["id"]),
+            subject=data.get("subject", ""),
+            author=data.get("author", ""),
+            sent=_parse_datetime(data["sent"]),
+            to_names=data.get("toNames"),
+        )
+
+
+@dataclass(frozen=True)
+class MailPage:
+    """Страница списка писем из реестра."""
+    entries: List[MailEntry]
+    page: int
+    total_items: int
+
+    @classmethod
+    def from_raw(cls, data: dict) -> MailPage:
+        return cls(
+            entries=[MailEntry.from_raw(r) for r in data.get("rows", [])],
+            page=data.get("page", 1),
+            total_items=data.get("totalItems", 0),
+        )
+
 
 @dataclass(frozen=True)
 class MailRecipient:

@@ -92,6 +92,29 @@ for day in diary.schedule:
 
 Библиотека поддерживает внутреннюю почту «Сетевого Города».
 
+### Список писем (реестр)
+
+Получение списка писем с пагинацией. Поддерживаются папки:
+`"Inbox"` (входящие), `"Sent"` (отправленные), `"Draft"` (черновики), `"Deleted"` (удалённые).
+
+```python
+# Первая страница входящих (20 писем)
+page = await ns.mail_list("Inbox", page=1, page_size=20)
+print(f"Всего писем: {page.total_items}, на странице: {len(page.entries)}")
+
+for entry in page.entries:
+    print(f"  #{entry.id}  {entry.sent}  {entry.author}  «{entry.subject}»")
+
+# Вторая страница
+if page.total_items > 20:
+    page2 = await ns.mail_list("Inbox", page=2, page_size=20)
+
+# Отправленные
+sent = await ns.mail_list("Sent")
+for entry in sent.entries:
+    print(f"  #{entry.id}  «{entry.subject}»")
+```
+
 ### Непрочитанные письма
 
 ```python
@@ -99,16 +122,29 @@ unread_ids = await ns.mail_unread()
 print(f"Непрочитанных: {len(unread_ids)}")
 ```
 
-### Чтение письма
+### Чтение письма (текст + вложения)
 
 ```python
-for msg_id in unread_ids:
-    msg = await ns.mail_read(msg_id)
-    print(f"От: {msg.author_name}")
-    print(f"Тема: {msg.subject}")
-    print(f"Текст: {msg.text}")
-    print(f"Дата: {msg.sent}")
-    print(f"Файлы: {len(msg.file_attachments)}")
+msg = await ns.mail_read(message_id)
+print(f"От: {msg.author_name}")
+print(f"Тема: {msg.subject}")
+print(f"Текст: {msg.text}")
+print(f"Дата: {msg.sent}")
+print(f"Файлов: {len(msg.file_attachments)}")
+```
+
+### Скачивание вложений из письма
+
+```python
+from io import BytesIO
+
+msg = await ns.mail_read(message_id)
+for att in msg.file_attachments:
+    buf = BytesIO()
+    await ns.download_attachment(att.id, buf)
+    with open(att.name, "wb") as f:
+        f.write(buf.getvalue())
+    print(f"Скачан: {att.name} ({len(buf.getvalue())} байт)")
 ```
 
 ### Список получателей
@@ -116,14 +152,13 @@ for msg_id in unread_ids:
 ```python
 recipients = await ns.mail_recipients()
 for r in recipients:
-    print(f"{r.name} {r.organization_name}")
+    print(f"{r.name} ({r.organization_name})")
 ```
 
 ### Отправка письма
 
 ```python
 recipients = await ns.mail_recipients()
-# Отправить первому получателю
 await ns.mail_send(
     subject="Привет!",
     text="Текст письма.",

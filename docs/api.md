@@ -72,15 +72,23 @@ async with NetSchool("https://sgo.example.ru") as ns:
 
 Скачать аватар пользователя в `BytesIO`-буфер.
 
+### `mail_list(folder="Inbox", page=1, page_size=20, *, timeout=None)`
+
+Получить список писем из указанной папки с пагинацией. Возвращает `MailPage`.
+
+- `folder` (str): Папка — `"Inbox"` (входящие), `"Sent"` (отправленные), `"Draft"` (черновики), `"Deleted"` (удалённые).
+- `page` (int): Номер страницы (начиная с 1).
+- `page_size` (int): Количество писем на странице.
+
 ### `mail_unread(*, timeout=None)`
 
 Получить список ID непрочитанных писем. Возвращает `List[int]`.
 
 ### `mail_read(message_id, *, timeout=None)`
 
-Прочитать письмо по ID. Возвращает `Message`.
+Прочитать письмо по ID. Возвращает `Message` с полным текстом и списком вложений.
 
-- `message_id` (int): ID сообщения (можно получить из `mail_unread()`).
+- `message_id` (int): ID сообщения (из `mail_list()` или `mail_unread()`).
 
 ### `mail_recipients(*, timeout=None)`
 
