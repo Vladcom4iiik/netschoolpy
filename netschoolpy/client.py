@@ -94,6 +94,7 @@ class NetSchool:
             if isinstance(school, str)
             else school
         )
+        self._school_id = school_id
 
         try:
             resp = await self._http.post(
@@ -195,7 +196,12 @@ class NetSchool:
         ctx = _ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = _ssl.CERT_NONE
-        ctx.set_ciphers("DEFAULT:@SECLEVEL=1")
+        try:
+            ctx.set_ciphers("DEFAULT:@SECLEVEL=1")
+        except _ssl.SSLError:
+            # Некоторые сборки OpenSSL не поддерживают указанный набор шифров.
+            # В этом случае продолжаем с настройками по умолчанию.
+            pass
         ctx.options |= _ssl.OP_NO_TLSv1_3
 
         async with httpx.AsyncClient(
@@ -264,6 +270,21 @@ class NetSchool:
 
             # === ШАГ 3: Обработка ответа ESIA ===
             redirect_url = login_data.get("redirect_url")
+            if not redirect_url:
+                # возможные варианты ключей
+                redirect_url = (
+                    login_data.get("redirectUrl")
+                    or login_data.get("redirectURL")
+                    or login_data.get("url")
+                    or login_data.get("redirect")
+                )
+            if not redirect_url and isinstance(login_data.get("data"), dict):
+                redirect_url = (
+                    login_data["data"].get("redirect_url")
+                    or login_data["data"].get("redirectUrl")
+                    or login_data["data"].get("redirectURL")
+                    or login_data["data"].get("url")
+                )
             action = login_data.get("action", "")
 
             if redirect_url:
@@ -432,7 +453,12 @@ class NetSchool:
         ctx = _ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = _ssl.CERT_NONE
-        ctx.set_ciphers("DEFAULT:@SECLEVEL=1")
+        try:
+            ctx.set_ciphers("DEFAULT:@SECLEVEL=1")
+        except _ssl.SSLError:
+            # Некоторые сборки OpenSSL не поддерживают указанный набор шифров.
+            # В этом случае продолжаем с настройками по умолчанию.
+            pass
         ctx.options |= _ssl.OP_NO_TLSv1_3
 
         async with httpx.AsyncClient(
@@ -559,7 +585,7 @@ class NetSchool:
 
             if not redirect_url:
                 raise exceptions.LoginError(
-                    "Не удалось получить redirect_url после QR"
+                    f"Не удалось получить redirect_url после QR: {login_data}"
                 )
 
             # === ШАГ 4: Callback chain → loginState ===
@@ -736,6 +762,11 @@ class NetSchool:
                         ):
                             raise exceptions.LoginError(
                                 f"QR сессия истекла: {code}"
+                            )
+                        if code:
+                            msg = error.get("message", "") if isinstance(error, dict) else ""
+                            raise exceptions.LoginError(
+                                f"Ошибка ESIA при QR-входе: {code} — {msg}"
                             )
                         return data
 

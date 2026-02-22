@@ -170,6 +170,8 @@ async def main():
             if not ns_login or not ns_password:
                 fail("NS_LOGIN / NS_PASSWORD не заданы")
                 sys.exit(1)
+            if ns_school.isdigit():
+                ns_school = int(ns_school)
             info(f"Метод: логин/пароль школы ({ns_login})")
             await ns.login(ns_login, ns_password, ns_school)
             check("login()", True)
@@ -319,9 +321,87 @@ async def main():
         info("Нет заданий для проверки вложений — пропускаем")
 
     # ═══════════════════════════════════════════════════════════
-    #  ТЕСТ 9: Keep-alive
+    #  ТЕСТ 9: Информация о школе
     # ═══════════════════════════════════════════════════════════
-    section("9. KEEP-ALIVE")
+    section("9. ИНФОРМАЦИЯ О ШКОЛЕ")
+
+    try:
+        school = await ns.school_info()
+        check("school_info()", True, f"{school.name}")
+        check("School.name — str", isinstance(school.name, str), school.name[:60])
+        check("School.address — str", isinstance(school.address, str), school.address[:60])
+    except Exception as e:
+        check("school_info()", False, str(e))
+
+    # ═══════════════════════════════════════════════════════════
+    #  ТЕСТ 10: Почта (mail)
+    # ═══════════════════════════════════════════════════════════
+    section("10. ПОЧТА")
+
+    try:
+        from netschoolpy.models import MailEntry, MailPage, Message
+        check("import MailEntry, MailPage, Message", True)
+    except Exception as e:
+        check("import mail models", False, str(e))
+
+    try:
+        mail_page = await ns.mail_list(page_size=5)
+        check("mail_list()", True, f"total={mail_page.total_items}, entries={len(mail_page.entries)}")
+        check("MailPage.page", isinstance(mail_page.page, int), str(mail_page.page))
+        check("MailPage.total_items", isinstance(mail_page.total_items, int), str(mail_page.total_items))
+
+        if mail_page.entries:
+            e0 = mail_page.entries[0]
+            check("MailEntry.id — int", isinstance(e0.id, int), str(e0.id))
+            check("MailEntry.subject — str", isinstance(e0.subject, str), e0.subject[:50])
+            check("MailEntry.author — str", isinstance(e0.author, str), e0.author[:50])
+    except Exception as e:
+        check("mail_list()", False, str(e))
+        traceback.print_exc()
+
+    # mail_unread
+    try:
+        unread_ids = await ns.mail_unread()
+        check("mail_unread()", True, f"{len(unread_ids)} непрочитанных")
+    except Exception as e:
+        check("mail_unread()", False, str(e))
+
+    # mail_read — читаем первое письмо
+    test_msg_id = None
+    if mail_page.entries:
+        test_msg_id = mail_page.entries[0].id
+    if test_msg_id:
+        try:
+            msg = await ns.mail_read(test_msg_id)
+            check("mail_read(id)", True, f"id={msg.id}, тема='{msg.subject[:40]}'")
+            check("Message.text — str", isinstance(msg.text, str), f"{len(msg.text)} символов")
+            check("Message.file_attachments — list", isinstance(msg.file_attachments, list),
+                  f"{len(msg.file_attachments)} вложений")
+
+            # Скачиваем первое вложение, если есть
+            if msg.file_attachments:
+                att = msg.attachments[0]
+                buf = BytesIO()
+                await ns.download_attachment(att.id, buf)
+                check("download_attachment(mail)", buf.tell() > 0,
+                      f"{att.name}, {buf.tell()} байт")
+        except Exception as e:
+            check("mail_read(id)", False, str(e))
+            traceback.print_exc()
+    else:
+        info("Нет писем для чтения — пропускаем mail_read")
+
+    # mail_recipients
+    try:
+        recipients = await ns.mail_recipients()
+        check("mail_recipients()", True, f"{len(recipients)} получателей")
+    except Exception as e:
+        check("mail_recipients()", False, str(e))
+
+    # ═══════════════════════════════════════════════════════════
+    #  ТЕСТ 11: Keep-alive
+    # ═══════════════════════════════════════════════════════════
+    section("11. KEEP-ALIVE")
 
     try:
         check("keepalive_task активен", ns._keepalive_task is not None and not ns._keepalive_task.done())
@@ -333,9 +413,9 @@ async def main():
         check("keep-alive", False, str(e))
 
     # ═══════════════════════════════════════════════════════════
-    #  ТЕСТ 10: Выход
+    #  ТЕСТ 12: Выход
     # ═══════════════════════════════════════════════════════════
-    section("10. ВЫХОД")
+    section("12. ВЫХОД")
 
     try:
         await ns.logout()
