@@ -98,8 +98,11 @@ class HttpSession:
         **kwargs: Any,
     ) -> httpx.Response:
         effective = timeout if timeout is not None else self._timeout
+        max_5xx_retries = 3
+        retry_5xx = 0
 
         async def _retry() -> httpx.Response:
+            nonlocal retry_5xx
             while True:
                 try:
                     req = self._client.build_request(
@@ -111,6 +114,13 @@ class HttpSession:
                     )
                 except httpx.ReadTimeout:
                     await asyncio.sleep(0.1)
+                except httpx.HTTPStatusError as exc:
+                    status = exc.response.status_code
+                    if 500 <= status < 600 and retry_5xx < max_5xx_retries:
+                        retry_5xx += 1
+                        await asyncio.sleep(0.2 * retry_5xx)
+                        continue
+                    raise
 
         try:
             if effective and effective > 0:
