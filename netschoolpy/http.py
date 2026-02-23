@@ -132,4 +132,8 @@ class HttpSession:
     @staticmethod
     async def _check_status(response: httpx.Response) -> None:
         if not response.is_redirect:
-            response.raise_for_status()
+            if 500 <= response.status_code < 600:
+                # Логируем, но не поднимаем исключение для 5xx
+                print(f"WARNING: Server error {response.status_code} for {response.url}")
+            else:
+                response.raise_for_status()
