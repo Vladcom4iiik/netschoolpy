@@ -418,7 +418,7 @@ class NetSchool:
     async def login_via_gosuslugi_qr(
         self,
         qr_callback=None,
-        qr_timeout: int = 120,
+        qr_timeout: int = 60,  # Уменьшен тайм-аут до 1 минуты
         *,
         timeout: int | None = None,
     ) -> str:
@@ -607,7 +607,12 @@ class NetSchool:
                         )
                         await asyncio.sleep(delay)
                         continue
-                    raise
+                    raise exceptions.LoginError(
+                        "Не удалось выполнить вход через QR-код. "
+                        "Возможные причины: сервер недоступен, QR-код не привязан к школе Чувашии, "
+                        "или QR-код был отсканирован некорректно.\n"
+                        f"Детали ошибки: {e}"
+                    )
 
             redirect_url = login_data.get("redirect_url")
             action = login_data.get("action", "")

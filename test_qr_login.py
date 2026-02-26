@@ -26,7 +26,7 @@ async def show_qr(qr_data: str):
 
 
 async def main():
-    async with NetSchool("https://sgo.e-mordovia.ru") as ns:
+    async with NetSchool("https://test.ru") as ns:
         try:
             await ns.login_via_gosuslugi_qr(
                 qr_callback=show_qr,
