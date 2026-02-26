@@ -293,6 +293,10 @@ class NetSchool:
                 redirect_url = await self._handle_esia_mfa(
                     esia_client, login_data,
                 )
+            elif action == "SOLVE_ANOMALY_REACTION":
+                redirect_url = await self._handle_esia_anomaly(
+                    esia_client, login_data,
+                )
             elif action == "DONE":
                 redirect_url = login_data.get("redirect_url")
             elif action in ("MAX_QUIZ", "CHANGE_PASSWORD"):
@@ -623,6 +627,10 @@ class NetSchool:
                 redirect_url = await self._handle_esia_mfa(
                     esia_client, login_data,
                 )
+            elif action == "SOLVE_ANOMALY_REACTION":
+                redirect_url = await self._handle_esia_anomaly(
+                    esia_client, login_data,
+                )
             elif action == "DONE":
                 redirect_url = login_data.get("redirect_url")
             elif action in ("MAX_QUIZ", "CHANGE_PASSWORD"):
@@ -860,14 +868,19 @@ class NetSchool:
     ) -> Optional[str]:
         """Обработка двухфакторной аутентификации ESIA.
 
-        Поддерживает SMS, TOTP (приложение-аутентификатор) и PUSH (Госключ).
+        Поддерживает SMS, TOTP (приложение-аутентификатор), MAX и PUSH (Госключ).
         """
         mfa_details = login_data.get("mfa_details", {})
         mfa_type_raw = mfa_details.get("type", "UNKNOWN")
         mfa_type = str(mfa_type_raw).upper()
         if mfa_type == "TTP":
             mfa_type = "TOTP"
-        otp_details = mfa_details.get("otp_details", {})
+        otp_details = (
+            mfa_details.get("otp_details")
+            or mfa_details.get("ttp_details")
+            or mfa_details.get("otp_max_details")
+            or {}
+        )
 
         esia_headers = {
             "content-type": "application/json",
@@ -876,7 +889,7 @@ class NetSchool:
         }
         base = "https://esia.gosuslugi.ru/aas/oauth2/api/login"
 
-        if mfa_type in ("SMS", "TOTP"):
+        if mfa_type in ("SMS", "TOTP", "MAX"):
             if mfa_type == "SMS":
                 phone = otp_details.get("phone", "***")
                 code_len = otp_details.get("code_length", 6)
@@ -885,27 +898,91 @@ class NetSchool:
                 print(f"\nSMS-код отправлен на {phone}")
                 print(f"({code_len} цифр, действует {ttl}с, попыток: {attempts})")
                 prompt = "Введите код из SMS: "
+            elif mfa_type == "MAX":
+                code_len = otp_details.get("code_length", 6)
+                print(f"\nКод отправлен в приложение «Макс» ({code_len} цифр).")
+                prompt = "Введите код из приложения «Макс»: "
             else:
-                print("\nTOTP-код запрашивается из приложения-аутентификатора.")
+                code_len = otp_details.get("code_length", 6)
+                print(f"\nTOTP-код запрашивается из приложения-аутентификатора ({code_len} цифр).")
                 prompt = "Введите код из приложения-аутентификатора: "
 
             code = input(prompt).strip()
             if not code:
                 raise exceptions.LoginError("Код подтверждения не введён")
 
-            # Логирование для отладки
-            print("[DEBUG] Отправка кода подтверждения на сервер...")
+            # Для разных MFA-типов ESIA использует разные URL:
+            #   TOTP (TTP) → /mfa/verify
+            #   SMS        → /otp/verify
+            #   MAX        → /otp-max/verify
+            verify_url_map = {
+                "TOTP": f"{base}/mfa/verify",
+                "SMS":  f"{base}/otp/verify",
+                "MAX":  f"{base}/otp-max/verify",
+            }
+            verify_url = verify_url_map.get(mfa_type)
 
-            r = await esia_client.post(
-                f"{base}/verify", json={"code": code}, headers=esia_headers
-            )
-            if r.status_code != 200:
+            if verify_url:
+                r = await esia_client.post(
+                    verify_url,
+                    params={"code": code},
+                    headers=esia_headers,
+                )
+            else:
+                # Неизвестный тип — перебираем
+                raw_lower = str(mfa_type_raw).lower()
+                candidate_urls = [
+                    f"{base}/mfa/verify",
+                    f"{base}/{raw_lower}/verify",
+                    f"{base}/otp-{raw_lower}/verify",
+                    f"{base}/otp/verify",
+                ]
+                r = None
+                for url in candidate_urls:
+                    r = await esia_client.post(
+                        url,
+                        params={"code": code},
+                        headers=esia_headers,
+                    )
+                    if r.status_code != 404:
+                        break
+
+            if r is None or r.status_code == 404:
+                raise exceptions.LoginError(
+                    "Не найден endpoint для верификации MFA-кода. "
+                    f"Попробованные URL: {candidate_urls}"
+                )
+            if r.status_code not in (200, 201):
                 raise exceptions.LoginError(
                     f"Ошибка подтверждения кода: {r.status_code} {r.text[:300]}"
                 )
 
+            data = r.json()
+
+            # ESIA возвращает 201 с "failed" при неверном коде
+            if data.get("failed"):
+                error_code = data["failed"]
+                attempts_info = ""
+                details = (
+                    data.get("mfa_details", {}).get("otp_details")
+                    or data.get("mfa_details", {}).get("ttp_details")
+                    or data.get("mfa_details", {}).get("otp_max_details")
+                    or {}
+                )
+                left = details.get("verify_attempts_left")
+                if left is not None:
+                    attempts_info = f" (попыток осталось: {left})"
+                raise exceptions.LoginError(
+                    f"Неверный код подтверждения: {error_code}{attempts_info}"
+                )
+
             print("\n✅ Код подтверждён успешно!")
-            return r.json().get("redirect_url")
+            redirect_url = data.get("redirect_url")
+            if redirect_url:
+                return redirect_url
+
+            # После MFA может следовать ещё шаг (MAX_QUIZ и т.д.)
+            return await self._handle_esia_post_mfa(esia_client, data)
 
         elif mfa_type == "PUSH":
             print("\nПодтвердите вход в приложении Госключ...")
@@ -981,6 +1058,17 @@ class NetSchool:
                 action = data.get("action", "")
                 continue
 
+            elif action == "SOLVE_ANOMALY_REACTION":
+                redirect_url = await self._handle_esia_anomaly(
+                    esia_client, data,
+                )
+                if redirect_url:
+                    return redirect_url
+                resp = await esia_client.get(f"{base}/next-step", headers=esia_headers)
+                data = resp.json()
+                action = data.get("action", "")
+                continue
+
             else:
                 resp = await esia_client.get(f"{base}/next-step", headers=esia_headers)
                 new_data = resp.json()
@@ -997,6 +1085,75 @@ class NetSchool:
         raise exceptions.LoginError(
             "Слишком много шагов ESIA, возможно зацикливание"
         )
+
+    async def _handle_esia_anomaly(
+        self,
+        esia_client: httpx.AsyncClient,
+        login_data: dict,
+    ) -> Optional[str]:
+        """Обработка SOLVE_ANOMALY_REACTION (проверка безопасности ESIA).
+
+        ESIA присылает этот action при подозрительной активности.
+        Нужно запросить отправку SMS-кода и подтвердить его.
+        """
+        reaction = login_data.get("reaction_details", {})
+        guid = reaction.get("guid", "")
+        rtype = reaction.get("type", "")
+
+        esia_headers = {
+            "content-type": "application/json",
+            "origin": "https://esia.gosuslugi.ru",
+            "referer": "https://esia.gosuslugi.ru/login/",
+        }
+        base = "https://esia.gosuslugi.ru/aas/oauth2/api/login"
+
+        print(f"\n⚠️  ESIA: проверка безопасности (тип: {rtype})")
+
+        # Шаг 1: запросить отправку кода
+        r = await esia_client.post(
+            f"{base}/anomaly-reaction/start",
+            json={"guid": guid},
+            headers=esia_headers,
+        )
+        start_data = r.json() if r.status_code == 200 else {}
+
+        phone = start_data.get("phone", "***")
+        code_len = start_data.get("code_length", 6)
+        print(f"SMS-код отправлен на {phone} ({code_len} цифр)")
+
+        code = input("Введите код подтверждения: ").strip()
+        if not code:
+            raise exceptions.LoginError("Код подтверждения не введён")
+
+        # Шаг 2: подтвердить код
+        r = await esia_client.post(
+            f"{base}/anomaly-reaction/verify",
+            json={"code": code, "guid": guid},
+            headers=esia_headers,
+        )
+        if r.status_code != 200:
+            raise exceptions.LoginError(
+                f"Ошибка подтверждения кода безопасности: "
+                f"{r.status_code} {r.text[:300]}"
+            )
+
+        result = r.json()
+        print("✅ Проверка безопасности пройдена!")
+
+        redirect_url = result.get("redirect_url")
+        if redirect_url:
+            return redirect_url
+
+        # Может быть следующий шаг (MFA, MAX_QUIZ и т.д.)
+        action = result.get("action", "")
+        if action == "ENTER_MFA":
+            return await self._handle_esia_mfa(esia_client, result)
+        if action in ("MAX_QUIZ", "CHANGE_PASSWORD", "DONE"):
+            return await self._handle_esia_post_mfa(esia_client, result)
+
+        # Попробовать next-step
+        r = await esia_client.get(f"{base}/next-step", headers=esia_headers)
+        return await self._handle_esia_post_mfa(esia_client, r.json())
 
     async def _poll_esia_push(
         self,
