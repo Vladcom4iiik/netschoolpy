@@ -863,7 +863,10 @@ class NetSchool:
         Поддерживает SMS, TOTP (приложение-аутентификатор) и PUSH (Госключ).
         """
         mfa_details = login_data.get("mfa_details", {})
-        mfa_type = mfa_details.get("type", "UNKNOWN")
+        mfa_type_raw = mfa_details.get("type", "UNKNOWN")
+        mfa_type = str(mfa_type_raw).upper()
+        if mfa_type == "TTP":
+            mfa_type = "TOTP"
         otp_details = mfa_details.get("otp_details", {})
 
         esia_headers = {
@@ -911,7 +914,9 @@ class NetSchool:
                 return data
 
         else:
-            raise exceptions.LoginError(f"Неизвестный тип MFA: {mfa_type}")
+            raise exceptions.LoginError(
+                f"Неизвестный тип MFA: {mfa_type_raw}"
+            )
 
         if data.get("redirect_url"):
             return data["redirect_url"]

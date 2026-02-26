@@ -130,5 +130,5 @@ async with NetSchool("https://sgo.example.ru") as ns:
 
 ## Лицензия
 
-© 2026 Vladcom4iiik. Все права защищены.
-Только личное, некоммерческое использование. Подробнее — [LICENSE](LICENSE).
+© 2026 Vladcom4iiik.
+GNU GPLv3. Подробнее — [LICENSE](LICENSE).
