@@ -20,8 +20,14 @@ async with NetSchool('https://your-netschool-url.ru') as ns:
 Подробнее см. в разделе [Вход через Госуслуги](esia_login.md).
 
 ```python
-await ns.login_via_gosuslugi('gosuslugi_login', 'gosuslugi_password')
+await ns.login_via_gosuslugi(
+    'gosuslugi_login',
+    'gosuslugi_password',
+    school='Школа №1',  # если привязано несколько организаций
+)
 ```
+
+Поддерживается SMS, TOTP и MAX (Госключ) как второй фактор — код запрашивается через `input()`.
 
 ### Вход через QR-код Госуслуг
 
@@ -36,7 +42,7 @@ async def show_qr(qr_data: str):
     print("⚠️  QR-код действителен 1 минуту!")
     print("Отсканируйте в приложении Госуслуги → Сканер")
 
-await ns.login_via_gosuslugi_qr(qr_callback=show_qr, qr_timeout=120)
+await ns.login_via_gosuslugi_qr(qr_callback=show_qr, qr_timeout=120, school='Школа №1')
 ```
 
 Подробнее: [Вход через Госуслуги](esia_login.md).

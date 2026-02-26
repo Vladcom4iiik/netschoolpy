@@ -167,6 +167,7 @@ class NetSchool:
         esia_login: str | None = None,
         esia_password: str | None = None,
         *,
+        school: str | None = None,
         timeout: int | None = None,
     ) -> None:
         """Полноценный вход через Госуслуги (ESIA).
@@ -180,6 +181,9 @@ class NetSchool:
                            Если не указан — спросит через input().
         :param esia_password: Пароль Госуслуг.
                               Если не указан — спросит через input().
+        :param school: Название школы/организации для выбора.
+                       Если к аккаунту привязано несколько организаций
+                       и school не указан — выбор через input().
         """
         if esia_login is None:
             esia_login = input("Логин Госуслуг (телефон/email/СНИЛС): ").strip()
@@ -363,7 +367,7 @@ class NetSchool:
                     "Привяжите аккаунт Госуслуг к Сетевому Городу."
                 )
 
-            user = users[0]
+            user = self._pick_esia_user(users, school)
             user_id = user["id"]
             roles = user.get("roles", [])
             role = roles[0]["id"] if roles else None
@@ -424,6 +428,7 @@ class NetSchool:
         qr_callback=None,
         qr_timeout: int = 60,  # Уменьшен тайм-аут до 1 минуты
         *,
+        school: str | None = None,
         timeout: int | None = None,
     ) -> str:
         """Вход через Госуслуги по QR-коду.
@@ -692,7 +697,7 @@ class NetSchool:
                     "Привяжите аккаунт Госуслуг к Сетевому Городу."
                 )
 
-            user = users[0]
+            user = self._pick_esia_user(users, school)
             user_id = user["id"]
             roles = user.get("roles", [])
             role = roles[0]["id"] if roles else None
@@ -858,6 +863,58 @@ class NetSchool:
                 await writer.wait_closed()
             except Exception:
                 pass
+
+    # ── Выбор пользователя/организации ────────────────────────
+
+    @staticmethod
+    def _pick_esia_user(
+        users: list[dict],
+        school: str | None = None,
+    ) -> dict:
+        """Выбрать пользователя (организацию) из списка account-info.
+
+        - Если пользователь один — возвращаем сразу.
+        - Если передан ``school`` — ищем совпадение по имени
+          (подстрока, без учёта регистра).
+        - Иначе — интерактивный выбор через ``input()``.
+        """
+        if len(users) == 1:
+            return users[0]
+
+        # Собираем отображаемые имена
+        def _label(u: dict) -> str:
+            # SGO возвращает displayName вида
+            # "Иванов Иван (Школа №1, Город)"
+            return (
+                u.get("displayName")
+                or u.get("name")
+                or u.get("schoolName")
+                or u.get("organizationName")
+                or str(u.get("id", "?"))
+            )
+
+        labels = [_label(u) for u in users]
+
+        # Автовыбор по подстроке
+        if school:
+            needle = school.lower()
+            for idx, lbl in enumerate(labels):
+                if needle in lbl.lower():
+                    return users[idx]
+            raise exceptions.LoginError(
+                f"Организация «{school}» не найдена. "
+                f"Доступные: {', '.join(labels)}"
+            )
+
+        # Интерактивный выбор
+        print("К аккаунту привязано несколько организаций:")
+        for i, lbl in enumerate(labels, 1):
+            print(f"  {i}. {lbl}")
+        while True:
+            raw = input(f"Выберите организацию (1-{len(users)}): ").strip()
+            if raw.isdigit() and 1 <= int(raw) <= len(users):
+                return users[int(raw) - 1]
+            print("Некорректный ввод, попробуйте снова.")
 
     # ── MFA-обработка ────────────────────────────────────────
 

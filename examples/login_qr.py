@@ -33,7 +33,11 @@ async def main():
         print("Запуск входа через QR-код Госуслуг...")
         
         # Запускаем вход. Библиотека сама будет ждать, пока вы отсканируете код.
-        await ns.login_via_gosuslugi_qr(qr_callback=my_qr_callback)
+        # Параметр school= нужен, если к аккаунту привязано несколько организаций.
+        await ns.login_via_gosuslugi_qr(
+            qr_callback=my_qr_callback,
+            school=os.getenv("NS_SCHOOL"),
+        )
         
         print("QR-код успешно отсканирован! Вход выполнен.")
         

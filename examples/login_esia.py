@@ -16,8 +16,9 @@ async def main():
     try:
         print("Вход через Госуслуги (ESIA)...")
         
-        # Метод login_via_gosuslugi проходит полный цикл авторизации
-        await ns.login_via_gosuslugi(esia_login, esia_password)
+        # Метод login_via_gosuslugi проходит полный цикл авторизации.
+        # Параметр school= нужен, если к аккаунту привязано несколько организаций.
+        await ns.login_via_gosuslugi(esia_login, esia_password, school=os.getenv("NS_SCHOOL"))
         
         print("Успешный вход через ESIA!")
         

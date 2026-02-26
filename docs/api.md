@@ -26,19 +26,22 @@ async with NetSchool("https://sgo.example.ru") as ns:
 - `password` (str): Пароль.
 - `school` (str | int): Название школы (или её ID).
 
-### `login_via_gosuslugi(esia_login, esia_password, *, timeout=None)`
+### `login_via_gosuslugi(esia_login, esia_password, *, school=None, timeout=None)`
 
 Вход через Госуслуги (ЕСИА) — программно, без браузера.
+Поддерживает SMS, TOTP и MAX (Госключ) как второй фактор.
 
-- `esia_login` (str): Логин Госуслуг (телефон, email или СНИЛС).
-- `esia_password` (str): Пароль Госуслуг.
+- `esia_login` (str, optional): Логин Госуслуг (телефон, email или СНИЛС). Если не указан — запросит через `input()`.
+- `esia_password` (str, optional): Пароль Госуслуг. Если не указан — запросит через `input()`.
+- `school` (str, optional): Название организации для автовыбора (подстрока, без учёта регистра). Если к аккаунту привязано несколько организаций и `school` не указан — интерактивный выбор.
 
-### `login_via_gosuslugi_qr(qr_callback=None, qr_timeout=120, *, timeout=None)`
+### `login_via_gosuslugi_qr(qr_callback=None, qr_timeout=120, *, school=None, timeout=None)`
 
 Вход через QR-код Госуслуг.
 
 - `qr_callback` (callable, optional): Async/sync функция, получающая deep-link для QR.
 - `qr_timeout` (int): Таймаут ожидания сканирования (по-умолчанию 120 сек).
+- `school` (str, optional): Название организации для автовыбора (подстрока). Если к аккаунту привязано несколько организаций и `school` не указан — интерактивный выбор.
 
 ### `diary(start=None, end=None, *, timeout=None)`
 

@@ -43,19 +43,21 @@ asyncio.run(main())
 ### Через Госуслуги (логин + пароль ЕСИА)
 
 Программный вход через Госуслуги — без браузера.
-Поддерживает SMS и TOTP (приложение-аутентификатор) в качестве второго фактора.
+Поддерживает SMS, TOTP (приложение-аутентификатор) и MAX (Госключ) в качестве второго фактора.
 
 ```python
 async with NetSchool("https://sgo.example.ru") as ns:
     await ns.login_via_gosuslugi(
         esia_login="+79001234567",     # телефон, email или СНИЛС
         esia_password="your_password",
+        school="Школа №1",             # если к аккаунту привязано несколько организаций
     )
     diary = await ns.diary()
 ```
 
-При MFA код из SMS/TOTP будет запрошен через `input()`.
+При MFA код из SMS/TOTP/MAX будет запрошен через `input()`.
 Если `esia_login` / `esia_password` не указаны, они тоже запрашиваются через `input()`.
+Если к аккаунту привязано несколько организаций и `school` не указан — будет предложен интерактивный выбор.
 
 ### Через Госуслуги (QR-код)
 
@@ -73,6 +75,7 @@ async with NetSchool("https://sgo.example.ru") as ns:
     await ns.login_via_gosuslugi_qr(
         qr_callback=show_qr,   # вызовется после генерации QR
         qr_timeout=120,         # секунд ожидания сканирования
+        school="Школа №1",     # если привязано несколько организаций
     )
     diary = await ns.diary()
 ```
@@ -81,6 +84,7 @@ async with NetSchool("https://sgo.example.ru") as ns:
   `gosuslugi://auth/signed_token=...` для кодирования в QR.
   Если не указан — QR печатается в stdout (`pip install qrcode`).
 - `qr_timeout` — таймаут ожидания сканирования (по-умолчанию 120 сек).
+- `school` — название организации (подстрока). Если привязано несколько — выбирает автоматически. Без параметра — интерактивный выбор.
 
 ### По токену / куки (продвинутое)
 
