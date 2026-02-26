@@ -883,31 +883,26 @@ class NetSchool:
                 print(f"({code_len} цифр, действует {ttl}с, попыток: {attempts})")
                 prompt = "Введите код из SMS: "
             else:
+                print("\nTOTP-код запрашивается из приложения-аутентификатора.")
                 prompt = "Введите код из приложения-аутентификатора: "
 
             code = input(prompt).strip()
             if not code:
                 raise exceptions.LoginError("Код подтверждения не введён")
 
-            resp = await esia_client.post(
-                f"{base}/otp/verify?code={code}",
-                headers=esia_headers,
+            # Логирование для отладки
+            print("[DEBUG] Отправка кода подтверждения на сервер...")
+
+            r = await esia_client.post(
+                f"{base}/verify", json={"code": code}, headers=esia_headers
             )
-            if resp.status_code not in (200, 202):
-                try:
-                    err = resp.json()
-                    raise exceptions.LoginError(
-                        f"Ошибка подтверждения: "
-                        f"{err.get('message', err.get('error', resp.text))}"
-                    )
-                except (ValueError, KeyError):
-                    raise exceptions.LoginError(
-                        f"Ошибка подтверждения (HTTP {resp.status_code})"
-                    )
-            try:
-                data = resp.json()
-            except ValueError:
-                data = {}
+            if r.status_code != 200:
+                raise exceptions.LoginError(
+                    f"Ошибка подтверждения кода: {r.status_code} {r.text[:300]}"
+                )
+
+            print("\n✅ Код подтверждён успешно!")
+            return r.json().get("redirect_url")
 
         elif mfa_type == "PUSH":
             print("\nПодтвердите вход в приложении Госключ...")
