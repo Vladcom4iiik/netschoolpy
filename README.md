@@ -8,6 +8,8 @@
 
 Репозиторий: https://github.com/Vladcom4iiik/netschoolpy
 
+[Поддержать проект (ЮMoney)](https://yoomoney.ru/to/4100118867747459)
+
 Ключевые слова: Сетевой город, SGO, дневник, оценки, домашние задания, Госуслуги, ESIA, QR, API.
 
 ## Документация (Docs)
