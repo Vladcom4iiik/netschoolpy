@@ -27,7 +27,7 @@ def _parse_datetime(value: Any) -> datetime.datetime:
     s = str(value)
     # Нормализуем дробную часть секунд до 6 цифр
     import re as _re
-    m = _re.match(r'^(.+\.\d{1,6}?)(\d*)(.*)$', s)
+    m = _re.match(r'^(.+\.\d{1,6})(\d*)(.*)$', s)
     if m:
         frac = m.group(1)
         # дополняем до 6 цифр после точки

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any, Optional
 
 import httpx
 
 from netschoolpy.exceptions import ServerUnavailable
+
+log = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 5  # секунд
 
@@ -133,7 +136,9 @@ class HttpSession:
     async def _check_status(response: httpx.Response) -> None:
         if not response.is_redirect:
             if 500 <= response.status_code < 600:
-                # Логируем, но не поднимаем исключение для 5xx
-                print(f"WARNING: Server error {response.status_code} for {response.url}")
+                log.warning(
+                    "Server error %d for %s",
+                    response.status_code, response.url,
+                )
             else:
                 response.raise_for_status()

@@ -1,5 +1,9 @@
 # netschoolpy
 
+[![CI](https://github.com/Vladcom4iiik/netschoolpy/actions/workflows/ci.yml/badge.svg)](https://github.com/Vladcom4iiik/netschoolpy/actions)
+[![PyPI](https://img.shields.io/pypi/v/netschoolpy)](https://pypi.org/project/netschoolpy/)
+[![Python](https://img.shields.io/pypi/pyversions/netschoolpy)](https://pypi.org/project/netschoolpy/)
+
 Асинхронный клиент для «Сетевого города». Дневник, оценки, домашние задания, объявления — всё программно, без браузера.
 
 Репозиторий: https://github.com/Vladcom4iiik/netschoolpy
@@ -114,6 +118,25 @@ ns.set_keepalive_interval(0)
 
 При вызове `logout()` keep-alive останавливается автоматически.
 
+## Экспорт/импорт сессии
+
+Чтобы не авторизоваться каждый раз, можно сохранить и восстановить сессию:
+
+```python
+from pathlib import Path
+
+# Сохранить после логина:
+session_data = ns.export_session()
+Path("session.json").write_text(session_data)
+
+# Восстановить при следующем запуске:
+async with NetSchool("https://sgo.example.ru") as ns:
+    try:
+        await ns.import_session(Path("session.json").read_text())
+    except netschoolpy.SessionExpired:
+        await ns.login(...)  # сессия истекла — логинимся заново
+```
+
 ## API
 
 ```python
@@ -130,6 +153,29 @@ async with NetSchool("https://sgo.example.ru") as ns:
 
     await ns.download_attachment(id, buffer)    # скачать вложение
     await ns.download_profile_picture(id, buf)  # аватар пользователя
+```
+
+## Исключения
+
+```python
+import netschoolpy
+
+netschoolpy.NetSchoolError      # базовое
+netschoolpy.LoginError          # ошибка авторизации
+netschoolpy.MFAError            # ошибка двухфакторной (SMS/TOTP/PUSH)
+netschoolpy.ESIAError           # ошибка на стороне Госуслуг
+netschoolpy.SchoolNotFound      # школа не найдена
+netschoolpy.SessionExpired      # сессия истекла (401)
+netschoolpy.ServerUnavailable   # сервер не ответил
+```
+
+## Логирование
+
+Библиотека использует стандартный `logging`. Для отладки:
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
 ```
 
 ## Лицензия
