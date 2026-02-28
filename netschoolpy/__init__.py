@@ -10,6 +10,7 @@ from .exceptions import (
     ServerUnavailable,
     SessionExpired,
 )
+from .regions import REGIONS, get_url, list_regions
 
 __version__ = "3.0.0"
 
@@ -22,4 +23,7 @@ __all__ = [
     "SchoolNotFound",
     "SessionExpired",
     "ServerUnavailable",
+    "REGIONS",
+    "get_url",
+    "list_regions",
 ]
