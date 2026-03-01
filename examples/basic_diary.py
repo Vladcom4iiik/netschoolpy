@@ -45,7 +45,7 @@ async def main():
                 qr = qrcode.QRCode()
                 qr.add_data(qr_data)
                 qr.print_ascii()
-                print("\n⚠️  ВАЖНО: QR-код действителен только 1 минуту!")
+                print("\n⚠️  ВАЖНО: QR-код действителен только 2 минуты!")
                 print("Отсканируйте QR-код в приложении Госуслуги -> Сканер")
 
             await ns.login_via_gosuslugi_qr(qr_callback)
@@ -55,6 +55,9 @@ async def main():
             await ns.login_via_gosuslugi(esia_login, esia_password)
             
         elif ns_login and ns_password:
+            if not ns_school:
+                print("❌ Укажите NS_SCHOOL (название школы)")
+                return
             print(f"Вход через логин/пароль школы (URL: {url})...")
             await ns.login(ns_login, ns_password, ns_school)
             
@@ -80,7 +83,6 @@ async def main():
     except Exception as e:
         print(f"❌ Ошибка: {e}")
     finally:
-        await ns.logout()
         await ns.close()
 
 

@@ -501,7 +501,7 @@ class NetSchool:
     async def login_via_gosuslugi_qr(
         self,
         qr_callback=None,
-        qr_timeout: int = 60,
+        qr_timeout: int = 120,
         *,
         school: str | None = None,
         timeout: int | None = None,
@@ -882,7 +882,9 @@ class NetSchool:
             }
             verify_url = verify_url_map.get(mfa_type)
 
+            tried_urls: list[str] = []
             if verify_url:
+                tried_urls.append(verify_url)
                 r = await esia_client.post(
                     verify_url,
                     params={"code": code},
@@ -890,14 +892,14 @@ class NetSchool:
                 )
             else:
                 raw_lower = str(mfa_type_raw).lower()
-                candidate_urls = [
+                tried_urls = [
                     f"{base}/mfa/verify",
                     f"{base}/{raw_lower}/verify",
                     f"{base}/otp-{raw_lower}/verify",
                     f"{base}/otp/verify",
                 ]
                 r = None
-                for url in candidate_urls:
+                for url in tried_urls:
                     r = await esia_client.post(
                         url,
                         params={"code": code},
@@ -909,7 +911,7 @@ class NetSchool:
             if r is None or r.status_code == 404:
                 raise exceptions.MFAError(
                     "Не найден endpoint для верификации MFA-кода. "
-                    f"Попробованные URL: {candidate_urls}"
+                    f"Попробованные URL: {tried_urls}"
                 )
             if r.status_code not in (200, 201):
                 raise exceptions.MFAError(
@@ -1568,7 +1570,7 @@ class NetSchool:
         """Скачать аватар пользователя."""
         resp = await self._authed_get(
             "users/photo",
-            params={"at": self._access_token, "userId": user_id},
+            params={"userId": user_id},
             timeout=timeout,
             follow_redirects=True,
         )

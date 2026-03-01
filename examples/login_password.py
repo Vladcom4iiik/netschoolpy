@@ -10,25 +10,20 @@ async def main():
     password = os.getenv("NS_PASSWORD", "password")
     school = os.getenv("NS_SCHOOL", "My School Name")
 
-    # Инициализация клиента
-    ns = NetSchool(url)
-    
-    try:
-        # Вход по логину и паролю
-        print(f"Попытка входа в {url}...")
-        await ns.login(login, password, school)
-        
-        print(f"Успешный вход! Студент: {ns._student_id}")
+    async with NetSchool(url) as ns:
+        try:
+            # Вход по логину и паролю
+            print(f"Попытка входа в {url}...")
+            await ns.login(login, password, school)
 
-        # Получаем данные
-        diary = await ns.diary()
-        print(f"Расписание загружено, дней: {len(diary.schedule)}")
+            print(f"Успешный вход! Студент: {ns._student_id}")
 
-    except Exception as e:
-        print(f"Ошибка: {e}")
-    finally:
-        await ns.logout()
-        await ns.close()
+            # Получаем данные
+            diary = await ns.diary()
+            print(f"Расписание загружено, дней: {len(diary.schedule)}")
+
+        except Exception as e:
+            print(f"Ошибка: {e}")
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ from .exceptions import (
 from .models import LoginMethods
 from .regions import REGIONS, get_url, list_regions
 
-__version__ = "3.0.0"
+__version__ = "3.2.1"
 
 __all__ = [
     "NetSchool",

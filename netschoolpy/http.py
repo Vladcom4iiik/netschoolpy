@@ -140,5 +140,4 @@ class HttpSession:
                     "Server error %d for %s",
                     response.status_code, response.url,
                 )
-            else:
-                response.raise_for_status()
+            response.raise_for_status()

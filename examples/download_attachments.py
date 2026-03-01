@@ -38,6 +38,9 @@ async def main():
             elif esia_login and esia_password:
                 await ns.login_via_gosuslugi(esia_login, esia_password)
             elif ns_login and ns_password:
+                if not ns_school:
+                    print("❌ Укажите NS_SCHOOL (название школы)")
+                    return
                 await ns.login(ns_login, ns_password, ns_school)
             else:
                 print("Нет данных (ENV NS_LOGIN/ESIA_LOGIN или --qr)")
