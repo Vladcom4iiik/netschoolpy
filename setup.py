@@ -38,7 +38,6 @@ setup(
     packages=["netschoolpy"],
     package_data={"netschoolpy": ["py.typed"]},
     classifiers=[
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: Russian",
         "Topic :: Education",
         "Programming Language :: Python :: 3",
