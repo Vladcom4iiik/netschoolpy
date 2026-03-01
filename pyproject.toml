@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netschoolpy"
-version = "3.0.1"
+version = "3.0.3"
 description = "Асинхронный клиент для «Сетевого города»"
 readme = "README.md"
 license = "GPL-3.0-only"
@@ -54,7 +54,7 @@ include = ["netschoolpy*"]
 netschoolpy = ["py.typed"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "3.0.3"
 line-length = 88
 
 [tool.ruff.lint]
@@ -62,7 +62,7 @@ select = ["E", "F", "W", "I", "UP", "N", "B"]
 ignore = ["E501"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.0.3"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
