@@ -238,14 +238,16 @@ class Diary:
 class ShortSchool:
     name: str
     id: int
-    address: str
+    short_name: str = ""
+    address: str = ""
 
     @classmethod
     def from_raw(cls, data: dict) -> ShortSchool:
         return cls(
             name=data["name"],
             id=data["id"],
-            address=data.get("addressString", ""),
+            short_name=data.get("shortName", ""),
+            address=data.get("addressString") or data.get("address") or "",
         )
 
 

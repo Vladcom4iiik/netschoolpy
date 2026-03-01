@@ -1,6 +1,6 @@
 """netschoolpy — асинхронный клиент для «Сетевого города»."""
 
-from .client import NetSchool
+from .client import NetSchool, search_schools
 from .exceptions import (
     ESIAError,
     LoginError,
@@ -16,6 +16,7 @@ __version__ = "3.0.0"
 
 __all__ = [
     "NetSchool",
+    "search_schools",
     "NetSchoolError",
     "LoginError",
     "MFAError",

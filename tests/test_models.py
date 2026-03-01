@@ -354,11 +354,31 @@ class TestShortSchool:
         assert s.name == "Школа №1"
         assert s.id == 42
         assert s.address == "ул. Ленина, 1"
+        assert s.short_name == ""
 
     def test_from_raw_no_address(self):
         raw = {"name": "Школа №2", "id": 43}
         s = ShortSchool.from_raw(raw)
         assert s.address == ""
+        assert s.short_name == ""
+
+    def test_from_raw_search_api(self):
+        """Формат ответа /schools/search."""
+        raw = {
+            "provinceId": 0,
+            "cityId": 1259,
+            "inn": "1326135767",
+            "ogrn": "1021300981767",
+            "address": None,
+            "shortName": 'МОУ "Средняя школа № 24"',
+            "id": 1110,
+            "name": 'МОУ "Средняя школа № 24" (г. Саранск)',
+        }
+        s = ShortSchool.from_raw(raw)
+        assert s.id == 1110
+        assert s.name == 'МОУ "Средняя школа № 24" (г. Саранск)'
+        assert s.short_name == 'МОУ "Средняя школа № 24"'
+        assert s.address == ""  # address=None → ""
 
 
 class TestSchool:

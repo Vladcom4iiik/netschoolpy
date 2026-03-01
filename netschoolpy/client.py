@@ -30,7 +30,7 @@ from netschoolpy.models import (
     ShortSchool,
 )
 
-__all__ = ["NetSchool"]
+__all__ = ["NetSchool", "search_schools"]
 
 log = logging.getLogger(__name__)
 
@@ -1575,14 +1575,39 @@ class NetSchool:
 
     # ══ Школы ════════════════════════════════════════════════
 
+    async def search_schools(
+        self,
+        query: str = "",
+        *,
+        timeout: int | None = None,
+    ) -> List[ShortSchool]:
+        """Поиск школ по названию.
+
+        Args:
+            query: Строка поиска (часть названия школы).
+                   Если пустая — вернёт все доступные школы.
+
+        Returns:
+            Список :class:`ShortSchool` с результатами поиска.
+
+        Пример::
+
+            schools = await ns.search_schools("Лицей")
+            for s in schools:
+                print(f"{s.id}: {s.short_name} — {s.name}")
+        """
+        # SGO требует хотя бы один символ в запросе
+        name = query if query else "У"
+        resp = await self._http.get(
+            "schools/search", params={"name": name}, timeout=timeout,
+        )
+        return [ShortSchool.from_raw(s) for s in resp.json()]
+
     async def schools(
         self, *, timeout: int | None = None,
     ) -> List[ShortSchool]:
-        """Список доступных школ."""
-        resp = await self._http.get(
-            "schools/search", params={"name": "У"}, timeout=timeout,
-        )
-        return [ShortSchool.from_raw(s) for s in resp.json()]
+        """Список доступных школ (алиас для ``search_schools()``)."""
+        return await self.search_schools(timeout=timeout)
 
     async def _resolve_school(
         self,
@@ -1590,14 +1615,34 @@ class NetSchool:
         *,
         timeout: int | None = None,
     ) -> int:
-        """Найти ID школы по короткому названию."""
+        """Найти ID школы по названию.
+
+        Сначала ищет точное совпадение по ``shortName``, затем
+        по вхождению в ``shortName`` или ``name``.
+        Если результат неоднозначен — бросает :class:`SchoolNotFound`.
+        """
         resp = await self._http.get(
             "schools/search", params={"name": school_name}, timeout=timeout,
         )
-        for s in resp.json():
-            if s["shortName"] == school_name:
+        items = resp.json()
+
+        # 1. Точное совпадение по shortName
+        for s in items:
+            if s.get("shortName") == school_name:
                 self._school_id = s["id"]
                 return s["id"]
+
+        # 2. Точное совпадение по name (без суффикса с городом)
+        for s in items:
+            if s.get("name", "").split(" (")[0] == school_name:
+                self._school_id = s["id"]
+                return s["id"]
+
+        # 3. Единственный результат — используем его
+        if len(items) == 1:
+            self._school_id = items[0]["id"]
+            return items[0]["id"]
+
         raise exceptions.SchoolNotFound(school_name)
 
     # ═══════════════════════════════════════════════════════════
@@ -1736,3 +1781,68 @@ class NetSchool:
         """Завершить сессию и закрыть HTTP-клиент."""
         await self.logout(timeout=timeout)
         await self._http.close()
+
+
+# ═══════════════════════════════════════════════════════════
+#  Автономный поиск школ (без авторизации)
+# ═══════════════════════════════════════════════════════════
+
+
+async def search_schools(
+    url: str,
+    query: str = "",
+    *,
+    timeout: int | None = None,
+) -> List[ShortSchool]:
+    """Поиск школ по названию на указанном сервере.
+
+    Не требует авторизации — удобно для выбора школы
+    перед вызовом :meth:`NetSchool.login`.
+
+    Args:
+        url: Базовый URL сервера ``"Сетевого города"``
+             (например ``"https://sgo.e-mordovia.ru"``).
+             Можно передать название региона — функция
+             попробует найти URL через :func:`get_url`.
+        query: Часть названия школы.  Если пустая — вернёт все школы.
+        timeout: Таймаут запроса в секундах.
+
+    Returns:
+        Список :class:`ShortSchool`.
+
+    Пример::
+
+        from netschoolpy import search_schools
+
+        schools = await search_schools(
+            "https://sgo.e-mordovia.ru",
+            "Лицей",
+        )
+        for s in schools:
+            print(f"{s.id}: {s.short_name} — {s.name}")
+
+    Также можно передать название региона::
+
+        schools = await search_schools("Республика Мордовия", "Лицей")
+    """
+    from netschoolpy.regions import get_url as _get_url
+
+    # Если передано имя региона вместо URL
+    if not url.startswith(("http://", "https://")):
+        resolved = _get_url(url)
+        if resolved is None:
+            raise ValueError(
+                f"Не удалось определить URL для региона {url!r}. "
+                "Передайте URL сервера явно."
+            )
+        url = resolved
+
+    session = HttpSession(url, timeout=timeout)
+    try:
+        name = query if query else "У"
+        resp = await session.get(
+            "schools/search", params={"name": name}, timeout=timeout,
+        )
+        return [ShortSchool.from_raw(s) for s in resp.json()]
+    finally:
+        await session.close()

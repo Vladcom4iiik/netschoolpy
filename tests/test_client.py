@@ -5,6 +5,7 @@ import json
 import pytest
 
 from netschoolpy import NetSchool
+from netschoolpy.client import search_schools
 from netschoolpy.exceptions import (
     ESIAError,
     LoginError,
@@ -177,3 +178,25 @@ class TestSessionExport:
         assert data["version"] == 1
         assert data["access_token"] == "tok123"
         assert data["student_id"] == 42
+
+
+# ═══════════════════════════════════════════════════════════
+#  search_schools — валидация аргументов
+# ═══════════════════════════════════════════════════════════
+
+
+class TestSearchSchoolsArgs:
+    @pytest.mark.asyncio
+    async def test_unknown_region_raises(self):
+        """Несуществующий регион → ValueError."""
+        with pytest.raises(ValueError, match="Не удалось определить URL"):
+            await search_schools("Неизвестная область", "школа")
+
+    @pytest.mark.asyncio
+    async def test_url_passthrough(self):
+        """URL начинающийся с http(s):// не проходит через get_url."""
+        # Ожидаем ошибку подключения, но не ValueError —
+        # значит URL был принят как есть.
+        with pytest.raises(Exception) as exc_info:
+            await search_schools("https://127.0.0.1:1", "школа", timeout=1)
+        assert not isinstance(exc_info.value, ValueError)
