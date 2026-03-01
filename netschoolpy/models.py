@@ -292,6 +292,82 @@ class School:
         )
 
 
+# ─────────────────────────── Способы входа ───────────────────────────
+
+@dataclass(frozen=True)
+class LoginMethods:
+    """Доступные способы авторизации на сервере SGO.
+
+    Поля:
+        password: Вход по логину и паролю SGO.
+        esia: Вход через Госуслуги (ЕСИА) доступен.
+        esia_main: Госуслуги — основной/обязательный способ входа.
+        esia_button: Кнопка «Войти через Госуслуги» отображается.
+        signature: Вход по электронной подписи.
+        windows_auth: Вход через Windows-аутентификацию.
+        sms: Вход по SMS.
+        esa: Вход через ЕСА (Единая система авторизации).
+        version: Версия сервера «Сетевой Город».
+        product_name: Название продукта.
+
+    Свойство :attr:`summary` возвращает человекочитаемое описание.
+    """
+    password: bool
+    esia: bool
+    esia_main: bool
+    esia_button: bool
+    signature: bool = False
+    windows_auth: bool = False
+    sms: bool = False
+    esa: bool = False
+    version: str = ""
+    product_name: str = ""
+
+    @classmethod
+    def from_raw(cls, data: dict) -> LoginMethods:
+        """Собирает ``LoginMethods`` из JSON ``/logindata``."""
+        return cls(
+            password=bool(data.get("schoolLogin", False)),
+            esia=bool(data.get("esiaLogin", False)),
+            esia_main=bool(data.get("esiaMainAuth", False)),
+            esia_button=bool(data.get("esiaButton", False)),
+            signature=bool(data.get("signatureLogin", False)),
+            windows_auth=bool(data.get("windowsAuth", False)),
+            sms=bool(data.get("enableSms", False)),
+            esa=bool(data.get("esaLogin", False)),
+            version=data.get("version", ""),
+            product_name=data.get("productName", ""),
+        )
+
+    @property
+    def summary(self) -> str:
+        """Человекочитаемое описание способов входа.
+
+        Примеры::
+
+            "только Госуслуги"
+            "логин/пароль + Госуслуги"
+            "логин/пароль"
+        """
+        parts: list[str] = []
+        if self.password and not self.esia_main:
+            parts.append("логин/пароль")
+        if self.esia:
+            if self.esia_main:
+                parts.append("только Госуслуги")
+            else:
+                parts.append("Госуслуги")
+        if self.signature:
+            parts.append("ЭП")
+        if self.sms:
+            parts.append("SMS")
+        if self.esa:
+            parts.append("ЕСА")
+        if self.windows_auth:
+            parts.append("Windows")
+        return " + ".join(parts) if parts else "неизвестно"
+
+
 # ─────────────────────────── Почта / сообщения ─────────────────────
 
 @dataclass(frozen=True)

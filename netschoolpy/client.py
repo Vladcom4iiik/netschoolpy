@@ -22,6 +22,7 @@ from netschoolpy.models import (
     Assignment,
     Attachment,
     Diary,
+    LoginMethods,
     MailEntry,
     MailPage,
     MailRecipient,
@@ -30,7 +31,7 @@ from netschoolpy.models import (
     ShortSchool,
 )
 
-__all__ = ["NetSchool", "search_schools"]
+__all__ = ["NetSchool", "search_schools", "get_login_methods"]
 
 log = logging.getLogger(__name__)
 
@@ -1573,6 +1574,28 @@ class NetSchool:
         )
         buffer.write(resp.content)
 
+    # ══ Способы входа ═════════════════════════════════════════
+
+    async def login_methods(
+        self, *, timeout: int | None = None,
+    ) -> LoginMethods:
+        """Получить информацию о доступных способах входа.
+
+        Не требует авторизации.
+
+        Returns:
+            :class:`LoginMethods` с флагами доступных способов.
+
+        Пример::
+
+            methods = await ns.login_methods()
+            print(methods.summary)  # "логин/пароль + Госуслуги"
+            if methods.esia_main:
+                print("Нужно входить через Госуслуги!")
+        """
+        resp = await self._http.get("logindata", timeout=timeout)
+        return LoginMethods.from_raw(resp.json())
+
     # ══ Школы ════════════════════════════════════════════════
 
     async def search_schools(
@@ -1844,5 +1867,58 @@ async def search_schools(
             "schools/search", params={"name": name}, timeout=timeout,
         )
         return [ShortSchool.from_raw(s) for s in resp.json()]
+    finally:
+        await session.close()
+
+
+async def get_login_methods(
+    url: str,
+    *,
+    timeout: int | None = None,
+) -> LoginMethods:
+    """Узнать доступные способы входа на сервере.
+
+    Не требует авторизации — удобно для определения,
+    какой метод ``login`` / ``login_via_gosuslugi`` использовать.
+
+    Args:
+        url: Базовый URL сервера ``"Сетевого города"``
+             (например ``"https://sgo.e-mordovia.ru"``).
+             Можно передать название региона.
+        timeout: Таймаут запроса в секундах.
+
+    Returns:
+        :class:`LoginMethods` с флагами доступных способов.
+
+    Пример::
+
+        from netschoolpy import get_login_methods
+
+        methods = await get_login_methods("https://sgo.e-mordovia.ru")
+        print(methods.summary)       # "логин/пароль + Госуслуги"
+        print(methods.password)      # True
+        print(methods.esia)          # True
+        print(methods.esia_main)     # False
+        print(methods.version)       # "5.47.0"
+
+    По имени региона::
+
+        methods = await get_login_methods("Республика Мордовия")
+    """
+    from netschoolpy.regions import get_url as _get_url
+
+    if not url.startswith(("http://", "https://")):
+        resolved = _get_url(url)
+        if resolved is None:
+            raise ValueError(
+                f"Не удалось определить URL для региона {url!r}. "
+                "Передайте URL сервера явно."
+            )
+        url = resolved
+
+    session = HttpSession(url, timeout=timeout)
+    try:
+        resp = await session.get("logindata", timeout=timeout)
+        return LoginMethods.from_raw(resp.json())
     finally:
         await session.close()

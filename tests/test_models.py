@@ -10,6 +10,7 @@ from netschoolpy.models import (
     Day,
     Diary,
     Lesson,
+    LoginMethods,
     MailEntry,
     MailPage,
     MailRecipient,
@@ -411,6 +412,91 @@ class TestSchool:
         s = School.from_raw({})
         assert s.name == ""
         assert s.email == ""
+
+
+# ═══════════════════════════════════════════════════════════
+#  LoginMethods
+# ═══════════════════════════════════════════════════════════
+
+
+class TestLoginMethods:
+    def _mordovia_raw(self) -> dict:
+        """Типичный ответ /logindata (Мордовия)."""
+        return {
+            "productName": "Сетевой Город. Образование",
+            "version": "5.47.0",
+            "schoolLogin": True,
+            "emLogin": True,
+            "esiaLogin": True,
+            "esiaLoginPage": "/webapi/sso/esia/crosslogin",
+            "esiaMainAuth": False,
+            "esiaButton": True,
+            "signatureLogin": False,
+            "windowsAuth": False,
+            "enableSms": False,
+            "esaLogin": False,
+        }
+
+    def test_password_and_esia(self):
+        """Мордовия: логин/пароль + Госуслуги."""
+        m = LoginMethods.from_raw(self._mordovia_raw())
+        assert m.password is True
+        assert m.esia is True
+        assert m.esia_main is False
+        assert m.esia_button is True
+        assert m.version == "5.47.0"
+        assert "логин/пароль" in m.summary
+        assert "Госуслуги" in m.summary
+
+    def test_esia_only(self):
+        """Сервер, где только Госуслуги (esiaMainAuth=True)."""
+        raw = self._mordovia_raw()
+        raw["esiaMainAuth"] = True
+        raw["esiaButton"] = False
+        m = LoginMethods.from_raw(raw)
+        assert m.esia_main is True
+        assert "только Госуслуги" in m.summary
+        # логин/пароль не должен быть в summary когда esia_main
+        assert "логин/пароль" not in m.summary
+
+    def test_password_only(self):
+        """Сервер только с логин/пароль."""
+        raw = {
+            "schoolLogin": True,
+            "esiaLogin": False,
+            "esiaMainAuth": False,
+            "esiaButton": False,
+        }
+        m = LoginMethods.from_raw(raw)
+        assert m.password is True
+        assert m.esia is False
+        assert m.summary == "логин/пароль"
+
+    def test_empty_raw(self):
+        m = LoginMethods.from_raw({})
+        assert m.password is False
+        assert m.esia is False
+        assert m.summary == "неизвестно"
+
+    def test_all_flags(self):
+        """Все флаги включены."""
+        raw = {
+            "schoolLogin": True,
+            "esiaLogin": True,
+            "esiaMainAuth": False,
+            "esiaButton": True,
+            "signatureLogin": True,
+            "enableSms": True,
+            "esaLogin": True,
+            "windowsAuth": True,
+        }
+        m = LoginMethods.from_raw(raw)
+        assert m.signature is True
+        assert m.sms is True
+        assert m.esa is True
+        assert m.windows_auth is True
+        assert "ЭП" in m.summary
+        assert "SMS" in m.summary
 
 
 # ═══════════════════════════════════════════════════════════
