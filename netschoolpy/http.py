@@ -12,23 +12,33 @@ from netschoolpy.exceptions import ServerUnavailable
 
 log = logging.getLogger(__name__)
 
-_DEFAULT_TIMEOUT = 5  # секунд
+_DEFAULT_TIMEOUT = 5   # секунд (прямое соединение)
+_TOR_TIMEOUT = 30      # секунд (Tor медленнее)
+
+# SOCKS5-прокси Tor (локальный, поднятый системой)
+_TOR_PROXY = "socks5://127.0.0.1:9050"
+
+# Кэш хостов, для которых прямое соединение не работает → нужен Tor
+_tor_hosts: set[str] = set()
 
 
 class HttpSession:
     """Тонкая обёртка вокруг ``httpx.AsyncClient``.
 
     • При ``ReadTimeout`` автоматически повторяет запрос.
+    • При ``ConnectError``/``ConnectTimeout`` — автоматически повторяет
+      через Tor (socks5://127.0.0.1:9050), если он доступен.
+      Полезно для региональных серверов СГО, блокирующих datacenter IP.
     • Если общий таймаут ``timeout`` исчерпан — бросает ``ServerUnavailable``.
     """
 
     def __init__(self, base_url: str, *, timeout: int | None = None):
-        url = base_url.rstrip("/")
+        self._base_url = base_url.rstrip("/")
         self._client = httpx.AsyncClient(
-            base_url=f"{url}/webapi",
+            base_url=f"{self._base_url}/webapi",
             headers={
                 "user-agent": "NetSchoolPy/1.0",
-                "referer": url,
+                "referer": self._base_url,
             },
             event_hooks={"response": [self._check_status]},
         )
@@ -38,7 +48,7 @@ class HttpSession:
 
     @property
     def base_url(self) -> str:
-        return str(self._client.base_url)
+        return self._base_url
 
     @property
     def client(self) -> httpx.AsyncClient:
@@ -88,8 +98,29 @@ class HttpSession:
 
     async def close(self) -> None:
         await self._client.aclose()
+        if hasattr(self, "_tor_client"):
+            await self._tor_client.aclose()
 
     # ── внутренняя механика ──────────────────────────────────
+
+    def _get_active_client(self) -> httpx.AsyncClient:
+        """Возвращает Tor-клиент если хост заблокирован, иначе обычный."""
+        import httpx as _httpx
+        host = self._base_url
+        if host in _tor_hosts:
+            if not hasattr(self, "_tor_client"):
+                log.info("🧅 Tor fallback activated for %s", host)
+                self._tor_client = _httpx.AsyncClient(
+                    base_url=f"{host}/webapi",
+                    headers={
+                        "user-agent": "NetSchoolPy/1.0",
+                        "referer": host,
+                    },
+                    proxy=_TOR_PROXY,
+                    event_hooks={"response": [self._check_status]},
+                )
+            return self._tor_client
+        return self._client
 
     async def _send(
         self,
@@ -100,21 +131,18 @@ class HttpSession:
         follow_redirects: bool = False,
         **kwargs: Any,
     ) -> httpx.Response:
-        effective = timeout if timeout is not None else self._timeout
+        direct_timeout = timeout if timeout is not None else self._timeout
         max_5xx_retries = 3
-        retry_5xx = 0
 
-        async def _retry() -> httpx.Response:
-            nonlocal retry_5xx
+        async def _do_request(client: httpx.AsyncClient) -> httpx.Response:
+            retry_5xx = 0
             while True:
                 try:
-                    req = self._client.build_request(
+                    req = client.build_request(
                         method, path,
                         **{k: v for k, v in kwargs.items() if v is not None},
                     )
-                    return await self._client.send(
-                        req, follow_redirects=follow_redirects,
-                    )
+                    return await client.send(req, follow_redirects=follow_redirects)
                 except httpx.ReadTimeout:
                     await asyncio.sleep(0.1)
                 except httpx.HTTPStatusError as exc:
@@ -125,12 +153,40 @@ class HttpSession:
                         continue
                     raise
 
+        # Если хост уже помечен как требующий Tor — идём сразу через него
+        if self._base_url in _tor_hosts:
+            try:
+                return await asyncio.wait_for(
+                    _do_request(self._get_active_client()), _TOR_TIMEOUT
+                )
+            except asyncio.TimeoutError:
+                raise ServerUnavailable("Сервер не ответил (Tor)") from None
+
+        # Пробуем прямое соединение
+        connect_failed = False
         try:
-            if effective and effective > 0:
-                return await asyncio.wait_for(_retry(), effective)
-            return await _retry()
+            return await asyncio.wait_for(
+                _do_request(self._client), direct_timeout
+            )
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            connect_failed = True
         except asyncio.TimeoutError:
-            raise ServerUnavailable("Сервер не ответил") from None
+            connect_failed = True
+
+        # Прямое не сработало — пробуем через Tor
+        if connect_failed:
+            if self._base_url not in _tor_hosts:
+                log.warning(
+                    "🧅 Direct connection failed for %s, retrying via Tor...",
+                    self._base_url,
+                )
+                _tor_hosts.add(self._base_url)
+            try:
+                return await asyncio.wait_for(
+                    _do_request(self._get_active_client()), _TOR_TIMEOUT
+                )
+            except asyncio.TimeoutError:
+                raise ServerUnavailable("Сервер не ответил (Tor)") from None
 
     @staticmethod
     async def _check_status(response: httpx.Response) -> None:

@@ -202,7 +202,13 @@ class NetSchool:
 
         url = f"{sgo_origin}/webapi/sso/esia/crosslogin"
         for _ in range(20):
-            r = await esia_client.get(url)
+            try:
+                r = await esia_client.get(url)
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as exc:
+                raise exceptions.ESIAError(
+                    f"Не удалось подключиться при переходе на Госуслуги "
+                    f"(URL: {url}): {exc}"
+                ) from exc
             for h in r.headers.get_list("set-cookie"):
                 p = h.split(";")[0].split("=", 1)
                 if len(p) == 2:
@@ -442,6 +448,7 @@ class NetSchool:
             timeout=timeout or 30,
         ) as esia_client:
 
+          try:
             # === ШАГ 1: crosslogin chain ===
             url = await self._esia_crosslogin(esia_client, sgo_origin)
 
@@ -493,6 +500,12 @@ class NetSchool:
                 esia_client, sgo_origin, login_state, school,
                 timeout=timeout,
             )
+          except exceptions.ESIAError:
+            raise
+          except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as exc:
+            raise exceptions.ESIAError(
+                f"Не удалось подключиться к серверу Госуслуг (ESIA): {exc}"
+            ) from exc
 
     # ═══════════════════════════════════════════════════════════
     #  Госуслуги: QR-код
@@ -528,6 +541,7 @@ class NetSchool:
             timeout=timeout or 30,
         ) as esia_client:
 
+          try:
             # === ШАГ 1: crosslogin chain ===
             url = await self._esia_crosslogin(esia_client, sgo_origin)
 
@@ -637,6 +651,12 @@ class NetSchool:
                 esia_client, sgo_origin, login_state, school,
                 timeout=timeout,
             )
+          except exceptions.ESIAError:
+            raise
+          except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as exc:
+            raise exceptions.ESIAError(
+                f"Не удалось подключиться к серверу Госуслуг (ESIA): {exc}"
+            ) from exc
 
         return signed_token
 
@@ -759,9 +779,7 @@ class NetSchool:
                     return data
 
         except asyncio.TimeoutError:
-            raise exceptions.ESIAError(
-                "Таймаут ожидания QR сканирования"
-            )
+            raise
         finally:
             writer.close()
             try:
