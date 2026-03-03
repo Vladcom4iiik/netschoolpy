@@ -1874,6 +1874,7 @@ async def search_schools(
     query: str = "",
     *,
     timeout: int | None = None,
+    proxy: str | None = None,
 ) -> List[ShortSchool]:
     """Поиск школ по названию на указанном сервере.
 
@@ -1918,7 +1919,7 @@ async def search_schools(
             )
         url = resolved
 
-    session = HttpSession(url, timeout=timeout)
+    session = HttpSession(url, timeout=timeout, proxy=proxy)
     try:
         name = query if query else "У"
         resp = await session.get(
